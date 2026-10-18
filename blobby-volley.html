@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="hello Amanda — Blobby Volley: zwei Blobs, ein Ball, zuerst 15 Punkte.">
+  <title>Blobby Volley — hello Amanda</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%23ff6b8a' stroke='%23241c16' stroke-width='6'/%3E%3Ccircle cx='36' cy='44' r='6' fill='%23241c16'/%3E%3Ccircle cx='64' cy='44' r='6' fill='%23241c16'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #241c16;
+      --muted: #6d5c4d;
+      --card: #fffaf3;
+      --paper: #fff6ea;
+      --tomato: #c2412d;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; height: 100%; }
+
+    body {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", "Gill Sans", "Helvetica Neue", sans-serif;
+      background: #8fd4f8;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    button, select { font: inherit; color: inherit; }
+
+    header {
+      flex: 0 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 10px;
+      padding:
+        max(8px, env(safe-area-inset-top))
+        max(10px, env(safe-area-inset-right))
+        8px
+        max(10px, env(safe-area-inset-left));
+      background: var(--paper);
+      border-bottom: 3px solid var(--ink);
+    }
+
+    .back {
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 800;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #fff;
+      white-space: nowrap;
+    }
+
+    .back-short { display: none; }
+
+    .back:hover { background: var(--card); }
+    .back:focus-visible, button:focus-visible, select:focus-visible {
+      outline: 3px solid var(--tomato);
+      outline-offset: 2px;
+    }
+
+    .titles { min-width: 0; }
+    .hello {
+      margin: 0;
+      color: var(--tomato);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      line-height: 1.1;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Palatino Linotype", Palatino, serif;
+      font-size: 1.15rem;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .score {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-left: auto;
+      font-weight: 800;
+      font-size: 1.15rem;
+      background: #fff;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 4px 12px;
+    }
+
+    .score strong { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+    .score .you strong { color: #c4234a; }
+    .score .cpu strong { color: #1d4ed8; }
+    .colon { opacity: 0.55; }
+
+    .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    select, .ghost {
+      background: #fff;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 800;
+    }
+
+    .ghost { cursor: pointer; }
+    .ghost:hover { background: var(--card); }
+
+    .live-hint {
+      flex-basis: 100%;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .stage {
+      flex: 1 1 auto;
+      min-height: 0;
+      position: relative;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .pad {
+      display: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding:
+        8px
+        max(10px, env(safe-area-inset-right))
+        max(10px, env(safe-area-inset-bottom))
+        max(10px, env(safe-area-inset-left));
+      justify-content: space-between;
+      align-items: flex-end;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .pad-move, .pad-jump { display: flex; gap: 8px; pointer-events: auto; }
+
+    .pad button {
+      width: 72px;
+      height: 64px;
+      border-radius: 18px;
+      border: 3px solid var(--ink);
+      background: rgba(255, 250, 243, 0.9);
+      font-weight: 800;
+      font-size: 1.35rem;
+      box-shadow: 4px 4px 0 rgba(36, 28, 22, 0.25);
+      touch-action: none;
+    }
+
+    .pad button:active, .pad button.is-held {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+    }
+
+    #btn-jump {
+      width: 104px;
+      background: #ff6b8a;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    body.show-pad .pad,
+    .pad.is-on { display: flex; }
+
+    @media (pointer: coarse), (any-pointer: coarse) {
+      .pad { display: flex; }
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      background: rgba(18, 50, 74, 0.28);
+      overflow: auto;
+    }
+
+    .overlay[hidden] { display: none; }
+
+    .dialog {
+      width: min(560px, 100%);
+      background: var(--card);
+      border: 3px solid var(--ink);
+      border-radius: 24px;
+      box-shadow: 8px 8px 0 var(--ink);
+      padding: 18px 16px 16px;
+    }
+
+    .dialog h2 {
+      margin: 0 0 8px;
+      font-family: Georgia, "Palatino Linotype", Palatino, serif;
+      font-size: clamp(1.7rem, 5vw, 2.3rem);
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+
+    .dialog p { margin: 0 0 10px; line-height: 1.4; }
+
+    .label {
+      margin: 4px 0 8px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .diffs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .diffs button {
+      text-align: left;
+      background: #fff;
+      border: 2px solid var(--ink);
+      border-radius: 16px;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+
+    .diffs button strong { display: block; }
+    .diffs button span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .diffs button.is-on {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .diffs button.is-on span { color: #f0d8c4; }
+
+    #diff-hint {
+      min-height: 2.6em;
+      font-weight: 700;
+    }
+
+    .go {
+      appearance: none;
+      background: var(--ink);
+      color: #fff;
+      border: 3px solid var(--ink);
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 800;
+      font-size: 1.05rem;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 #e38b4a;
+    }
+
+    .go:hover { transform: translate(-1px, -1px); }
+    .go:active { transform: translate(1px, 1px); box-shadow: none; }
+
+    .help {
+      margin: 12px 0 0;
+      padding-left: 1.1rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    @media (max-height: 520px) {
+      .live-hint { display: none; }
+      h1 { font-size: 1rem; }
+      .dialog { padding: 12px; }
+      .help { display: none; }
+    }
+
+    @media (max-width: 720px) {
+      header {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+      }
+      .back { grid-column: 1; }
+      .titles { grid-column: 2; }
+      .score { grid-column: 3; margin-left: 0; justify-self: end; }
+      .tools { grid-column: 1 / -1; }
+      .live-hint { grid-column: 1 / -1; }
+      .back-long { display: none; }
+      .back-short { display: inline; }
+      h1 { font-size: 1.02rem; }
+      .score { font-size: 1rem; padding: 3px 8px; }
+      .score strong { font-size: 1.15rem; }
+    }
+
+    @media (max-width: 420px) {
+      .dialog { padding: 14px 12px 12px; }
+      .dialog h2 { font-size: 1.5rem; }
+      .diffs button { padding: 7px 8px; }
+      #diff-hint { min-height: 0; }
+      .help { font-size: 0.85rem; }
+    }
+
+    @media (max-height: 720px) {
+      .help { display: none; }
+      #diff-hint { min-height: 0; }
+      .dialog { padding: 10px 12px; }
+      .dialog h2 { font-size: 1.4rem; margin-bottom: 4px; }
+      .dialog p { margin-bottom: 6px; }
+    }
+
+    @media (max-height: 430px) {
+      .diffs { grid-template-columns: repeat(4, 1fr); }
+      .diffs button span { display: none; }
+      .diffs button { text-align: center; padding: 8px 4px; }
+      #diff-hint { display: none; }
+      .live-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back" href="index.html" aria-label="Zurück zur Übersicht"><span class="back-long">Zurück zur Übersicht</span><span class="back-short">← Übersicht</span></a>
+    <div class="titles">
+      <p class="hello">hello Amanda</p>
+      <h1>Blobby Volley</h1>
+    </div>
+    <div class="score" aria-live="polite">
+      <span class="you">Du <strong id="score-you">0</strong></span>
+      <span class="colon">:</span>
+      <span class="cpu"><strong id="score-ai">0</strong> KI</span>
+    </div>
+    <div class="tools">
+      <label>
+        <span class="sr">Schwierigkeit</span>
+        <select id="difficulty">
+          <option value="leicht">Leicht</option>
+          <option value="mittel">Mittel</option>
+          <option value="schwer">Schwer</option>
+          <option value="unmoeglich">Unmöglich</option>
+        </select>
+      </label>
+      <button type="button" class="ghost" id="restart">Neustart</button>
+    </div>
+    <p class="live-hint" id="live-hint">Maus bewegen, Klick springt. Pfeile oder WASD, Leertaste springt.</p>
+  </header>
+
+  <div class="stage">
+    <canvas id="court" width="960" height="540" tabindex="-1" aria-label="Spielfeld Blobby Volley. Du steuerst den linken Blob."></canvas>
+
+    <div class="pad" id="pad">
+      <div class="pad-move">
+        <button type="button" id="btn-left" aria-label="Nach links">←</button>
+        <button type="button" id="btn-right" aria-label="Nach rechts">→</button>
+      </div>
+      <div class="pad-jump">
+        <button type="button" id="btn-jump" aria-label="Springen">Sprung</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+        <div id="menu-block">
+          <h2 id="dialog-title">Blobby Volley</h2>
+          <p>Du bist links, die KI rechts. Berührt der Ball deinen Boden, punktet die andere Seite. Zuerst 15 gewinnt.</p>
+          <p class="label">Schwierigkeit</p>
+          <div class="diffs">
+            <button type="button" data-diff="leicht"><strong>Leicht</strong><span>Langsam, spät dran, verpasst viel.</span></button>
+            <button type="button" data-diff="mittel"><strong>Mittel</strong><span>Hält mit, liegt oft daneben.</span></button>
+            <button type="button" data-diff="schwer"><strong>Schwer</strong><span>Liest den Ball und springt pünktlich.</span></button>
+            <button type="button" data-diff="unmoeglich"><strong>Unmöglich</strong><span>Fast keine Fehler, spielt in die Lücke.</span></button>
+          </div>
+          <p id="diff-hint"></p>
+          <button type="button" class="go" id="start">Anpfiff</button>
+          <ul class="help">
+            <li>Rechner: Maus bewegen, Klick springt. Pfeile oder A und D, W oder Leertaste zum Springen.</li>
+            <li>Handy: Finger über das Feld ziehen, tippen oder nach oben wischen. Unten gibt es auch Tasten.</li>
+          </ul>
+        </div>
+        <div id="end-block" hidden>
+          <h2 id="end-title">Satz</h2>
+          <p id="end-text"></p>
+          <p id="end-score"></p>
+          <button type="button" class="go" id="again">Nochmal spielen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="sr" id="announce" aria-live="polite"></p>
+
+  <script>
+    const COURT_W = 960;
+    const COURT_H = 540;
+    const FLOOR_Y = 500;
+    const NET_X = 480;
+    const NET_HALF = 8;
+    const NET_TOP = 352;
+    const BLOB_R = 36;
+    const BALL_R = 14;
+    const GRAVITY = 0.22;
+    const BLOB_G = 0.5;
+    const JUMP_V = -12.4;
+    const SPEED = 6.6;
+    const WIN_SCORE = 15;
+    const LEFT_MIN = BLOB_R + 12;
+    const LEFT_MAX = NET_X - NET_HALF - BLOB_R - 8;
+    const RIGHT_MIN = NET_X + NET_HALF + BLOB_R + 8;
+    const RIGHT_MAX = COURT_W - BLOB_R - 12;
+
+    const DIFFS = {
+      leicht: {
+        label: "Leicht",
+        hint: "Die KI läuft langsam, schätzt den Ball schlecht und springt meist zu spät. Gut zum Reinkommen.",
+        reaction: 44,
+        error: 150,
+        speed: 0.44,
+        mistake: 0.44,
+        jumpLate: 16,
+        jumpJitter: 5,
+        aim: 0,
+        predict: false
+      },
+      mittel: {
+        label: "Mittel",
+        hint: "Die KI rechnet ungefähr mit und springt manchmal zur richtigen Zeit. Gerade Bälle kommen zurück.",
+        reaction: 16,
+        error: 40,
+        speed: 0.82,
+        mistake: 0.12,
+        jumpLate: 4,
+        jumpJitter: 4,
+        aim: 10,
+        predict: true
+      },
+      schwer: {
+        label: "Schwer",
+        hint: "Die KI liest die Flugbahn früh, steht meist richtig und springt knapp vor dem Ball.",
+        reaction: 7,
+        error: 14,
+        speed: 1,
+        mistake: 0.04,
+        jumpLate: 1,
+        jumpJitter: 2,
+        aim: 16,
+        predict: true
+      },
+      unmoeglich: {
+        label: "Unmöglich",
+        hint: "Die KI reagiert sofort, springt auf den Punkt und legt den Ball dorthin, wo du nicht stehst.",
+        reaction: 1,
+        error: 0,
+        speed: 1.28,
+        mistake: 0,
+        jumpLate: 0,
+        jumpJitter: 0,
+        aim: 22,
+        predict: true
+      }
+    };
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canvas = document.getElementById("court");
+    const ctx = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const menuBlock = document.getElementById("menu-block");
+    const endBlock = document.getElementById("end-block");
+    const dialogTitle = document.getElementById("dialog-title");
+    const endTitle = document.getElementById("end-title");
+    const endText = document.getElementById("end-text");
+    const endScore = document.getElementById("end-score");
+    const hintEl = document.getElementById("diff-hint");
+    const liveHint = document.getElementById("live-hint");
+    const announceEl = document.getElementById("announce");
+    const scoreYouEl = document.getElementById("score-you");
+    const scoreAiEl = document.getElementById("score-ai");
+    const diffSelect = document.getElementById("difficulty");
+    const pad = document.getElementById("pad");
+
+    const view = { scale: 1, ox: 0, oy: 0 };
+    const keys = { left: false, right: false };
+    const hold = { left: false, right: false };
+    const touches = new Map();
+    const puffs = [];
+
+    let difficulty = "leicht";
+    let phase = "menu";
+    let server = "left";
+    let rallyHits = 0;
+    let tick = 0;
+    let pointTimer = 0;
+    let banner = "Schau zu, oder pfiff an";
+    let bannerTimer = 90;
+    let shake = 0;
+    let jumpBuffer = 0;
+    let touchX = null;
+    let pointerX = null;
+    let ignoreMouseUntil = 0;
+    let autoLeft = null;
+    let stillFrames = 0;
+    let prevBall = { x: 0, y: 0 };
+    let hintHidden = false;
+    let lastRally = 0;
+    const pointsLog = [];
+
+    const scores = { player: 0, ai: 0 };
+
+    function makeBlob(side) {
+      const minX = side === "left" ? LEFT_MIN : RIGHT_MIN;
+      const maxX = side === "left" ? LEFT_MAX : RIGHT_MAX;
+      return {
+        side: side,
+        x: side === "left" ? 220 : COURT_W - 220,
+        y: FLOOR_Y - BLOB_R,
+        vx: 0,
+        vy: 0,
+        minX: minX,
+        maxX: maxX,
+        onGround: true,
+        squash: 1,
+        hitCd: 0,
+        blink: 90,
+        brain: { timer: 0, targetX: (minX + maxX) / 2, jumpFrame: null }
+      };
+    }
+
+    const player = makeBlob("left");
+    const ai = makeBlob("right");
+    const ball = { x: 250, y: 170, vx: 1.1, vy: 0.2, trail: [] };
+
+    function clamp(v, a, b) {
+      return Math.max(a, Math.min(b, v));
+    }
+
+    function announce(text) {
+      announceEl.textContent = text;
+    }
+
+    function refreshScore() {
+      scoreYouEl.textContent = String(scores.player);
+      scoreAiEl.textContent = String(scores.ai);
+    }
+
+    function setDifficulty(id) {
+      if (!DIFFS[id]) return;
+      difficulty = id;
+      diffSelect.value = id;
+      document.querySelectorAll("[data-diff]").forEach((btn) => {
+        btn.classList.toggle("is-on", btn.dataset.diff === id);
+        btn.setAttribute("aria-pressed", btn.dataset.diff === id ? "true" : "false");
+      });
+      hintEl.textContent = DIFFS[id].hint;
+    }
+
+    function hideHint() {
+      if (hintHidden) return;
+      hintHidden = true;
+      liveHint.hidden = true;
+    }
+
+    function requestJump() {
+      jumpBuffer = 8;
+      hideHint();
+    }
+
+    function hop(blob) {
+      if (!blob.onGround) return false;
+      blob.vy = JUMP_V;
+      blob.onGround = false;
+      blob.squash = 0.78;
+      return true;
+    }
+
+    function approach(blob, x, speed) {
+      const dx = clamp(x, blob.minX, blob.maxX) - blob.x;
+      if (Math.abs(dx) <= 4) blob.vx = 0;
+      else blob.vx = Math.sign(dx) * Math.min(speed, Math.abs(dx) * 0.55);
+    }
+
+    function clientToWorld(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = ((clientX - rect.left) / rect.width) * canvas.width;
+      const y = ((clientY - rect.top) / rect.height) * canvas.height;
+      return {
+        x: (x - view.ox) / view.scale,
+        y: (y - view.oy) / view.scale
+      };
+    }
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(1, rect.width);
+      const h = Math.max(1, rect.height);
+      const nextW = Math.round(w * dpr);
+      const nextH = Math.round(h * dpr);
+      if (canvas.width !== nextW || canvas.height !== nextH) {
+        canvas.width = nextW;
+        canvas.height = nextH;
+      }
+      const scale = Math.min(w / COURT_W, h / COURT_H);
+      view.scale = scale * dpr;
+      view.ox = (canvas.width - COURT_W * view.scale) / 2;
+      const extra = canvas.height - COURT_H * view.scale;
+      view.oy = extra > 0 ? extra * 0.18 : 0;
+    }
+
+    function serveFrom(side) {
+      ball.x = side === "left" ? 250 : COURT_W - 250;
+      ball.y = 168;
+      ball.vx = side === "left" ? 1.15 : -1.15;
+      ball.vy = 0.15;
+      ball.trail = [];
+      stillFrames = 0;
+    }
+
+    function resetBlobPose(blob, x) {
+      blob.x = x;
+      blob.y = FLOOR_Y - BLOB_R;
+      blob.vx = 0;
+      blob.vy = 0;
+      blob.onGround = true;
+      blob.squash = 1;
+      blob.hitCd = 0;
+      blob.brain.timer = 0;
+      blob.brain.jumpFrame = null;
+      blob.brain.targetX = (blob.minX + blob.maxX) / 2;
+    }
+
+    function showMenu() {
+      phase = "menu";
+      overlay.hidden = false;
+      menuBlock.hidden = false;
+      endBlock.hidden = true;
+      dialogTitle.id = "dialog-title";
+      endTitle.removeAttribute("id");
+    }
+
+    function showEnd(winner) {
+      phase = "over";
+      overlay.hidden = false;
+      menuBlock.hidden = true;
+      endBlock.hidden = false;
+      dialogTitle.removeAttribute("id");
+      endTitle.id = "dialog-title";
+      const youWon = winner === "player";
+      endTitle.textContent = youWon ? "Du gewinnst!" : "Die KI gewinnt";
+      endText.textContent = youWon
+        ? "15 Punkte. Der Blob gegenüber setzt sich erst mal hin."
+        : "15 Punkte für die andere Seite. Eine leichtere Stufe wartet im Menü oben.";
+      endScore.textContent = "Du " + scores.player + " : " + scores.ai + " KI · Stufe " + DIFFS[difficulty].label;
+      announce(endTitle.textContent + " " + endScore.textContent);
+      document.getElementById("again").focus();
+    }
+
+    function startMatch() {
+      scores.player = 0;
+      scores.ai = 0;
+      pointsLog.length = 0;
+      lastRally = 0;
+      refreshScore();
+      server = "left";
+      rallyHits = 0;
+      resetBlobPose(player, 220);
+      resetBlobPose(ai, COURT_W - 220);
+      overlay.hidden = true;
+      beginServe();
+      canvas.focus({ preventScroll: true });
+      announce("Anpfiff. Dein Aufschlag. Zuerst 15 Punkte. Stufe " + DIFFS[difficulty].label);
+    }
+
+    function beginServe() {
+      phase = "play";
+      rallyHits = 0;
+      player.y = FLOOR_Y - BLOB_R;
+      player.vy = 0;
+      player.onGround = true;
+      ai.y = FLOOR_Y - BLOB_R;
+      ai.vy = 0;
+      ai.onGround = true;
+      player.brain.jumpFrame = null;
+      ai.brain.jumpFrame = null;
+      player.brain.timer = 0;
+      ai.brain.timer = 0;
+      serveFrom(server);
+      banner = server === "left" ? "Dein Aufschlag" : "Aufschlag der KI";
+      bannerTimer = 56;
+      announce(banner);
+    }
+
+    function award(winner) {
+      if (phase !== "play") return;
+      lastRally = rallyHits;
+      pointsLog.push(lastRally);
+      if (pointsLog.length > 40) pointsLog.shift();
+      scores[winner] += 1;
+      server = winner === "player" ? "left" : "right";
+      rallyHits = 0;
+      refreshScore();
+      ball.y = Math.min(ball.y, FLOOR_Y - BALL_R);
+      ball.vy = 0;
+      ball.vx *= 0.2;
+      spawnPuff(ball.x, FLOOR_Y - 10);
+      if (!reducedMotion) shake = 8;
+      if (scores[winner] >= WIN_SCORE) {
+        banner = winner === "player" ? "Satz für dich" : "Satz für die KI";
+        bannerTimer = 80;
+        showEnd(winner);
+        return;
+      }
+      phase = "point";
+      pointTimer = 62;
+      banner = winner === "player" ? "Punkt für dich" : "Punkt für die KI";
+      bannerTimer = 62;
+      announce(banner + ". " + scores.player + " zu " + scores.ai);
+    }
+
+    function onFloor() {
+      if (phase === "menu") {
+        rallyHits = 0;
+        serveFrom(Math.random() < 0.5 ? "left" : "right");
+        return;
+      }
+      if (phase !== "play") return;
+      award(ball.x <= NET_X ? "ai" : "player");
+    }
+
+    function collideNet(b) {
+      const left = NET_X - NET_HALF;
+      const right = NET_X + NET_HALF;
+      const nearestX = clamp(b.x, left, right);
+      const nearestY = clamp(b.y, NET_TOP, FLOOR_Y);
+      let dx = b.x - nearestX;
+      let dy = b.y - nearestY;
+      let dist = Math.hypot(dx, dy);
+      const inside = b.x > left && b.x < right && b.y > NET_TOP && b.y < FLOOR_Y;
+      if (dist > BALL_R && !inside) return;
+
+      if (dist < 0.001 || inside) {
+        const toLeft = Math.abs(b.x - left);
+        const toRight = Math.abs(b.x - right);
+        const toTop = b.y - NET_TOP;
+        if (toTop <= toLeft && toTop <= toRight) {
+          b.y = NET_TOP - BALL_R;
+          b.vy = -Math.abs(b.vy) * 0.5 - 0.4;
+          if (Math.abs(b.vx) < 0.4) b.vx = b.x < NET_X ? -0.7 : 0.7;
+        } else if (b.x < NET_X) {
+          b.x = left - BALL_R;
+          b.vx = -Math.abs(b.vx) * 0.6 - 0.3;
+        } else {
+          b.x = right + BALL_R;
+          b.vx = Math.abs(b.vx) * 0.6 + 0.3;
+        }
+        return;
+      }
+
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const overlap = BALL_R - dist;
+      b.x += nx * overlap;
+      b.y += ny * overlap;
+      const vn = b.vx * nx + b.vy * ny;
+      if (vn < 0) {
+        const rest = ny < -0.5 ? 0.45 : 0.58;
+        b.vx -= (1 + rest) * vn * nx;
+        b.vy -= (1 + rest) * vn * ny;
+      }
+    }
+
+    function delayBrain(blob, diff) {
+      blob.brain.timer = diff.reaction;
+      blob.brain.jumpFrame = null;
+    }
+
+    function resolveBlob(b, blob) {
+      let dx = b.x - blob.x;
+      let dy = b.y - blob.y;
+      let dist = Math.hypot(dx, dy);
+      const min = BALL_R + BLOB_R;
+      if (dist >= min) return;
+      if (dist < 0.001) {
+        dx = blob.side === "left" ? -0.15 : 0.15;
+        dy = -1;
+        dist = Math.hypot(dx, dy);
+      }
+      const nx = dx / dist;
+      const ny = dy / dist;
+      b.x += nx * (min - dist);
+      b.y += ny * (min - dist);
+      const rel = (b.vx - blob.vx) * nx + (b.vy - blob.vy) * ny;
+      if (rel >= 0 || blob.hitCd > 0) return;
+
+      const imp = -(1 + 0.9) * rel;
+      b.vx += imp * nx;
+      b.vy += imp * ny;
+
+      const dir = blob.side === "left" ? 1 : -1;
+      if (ny < -0.32) {
+        b.vy = Math.min(b.vy, -7.5);
+        const gap = Math.abs(NET_X - b.x) + 52;
+        const needed = clamp(gap / 46, 2.3, 9.2);
+        if (b.vx * dir < needed) b.vx = dir * needed;
+        b.vx += blob.vx * 0.42;
+      } else if (ny > 0.22) {
+        b.vx += dir * 3.6 + blob.vx * 0.25;
+        b.vy = Math.max(b.vy, 3.4);
+      } else {
+        if (b.vx * dir < 2.2) b.vx += dir * 2.6;
+        b.vx += blob.vx * 0.35;
+        if (b.vy > -2.2) b.vy -= 2.4;
+      }
+
+      const serveHit = rallyHits === 0;
+      let speed = Math.hypot(b.vx, b.vy);
+      const maxSp = serveHit ? 9.6 : 13;
+      const minSp = 6.3;
+      if (speed > maxSp && speed > 0) {
+        b.vx *= maxSp / speed;
+        b.vy *= maxSp / speed;
+        speed = maxSp;
+      }
+      if (speed < minSp && speed > 0.01) {
+        b.vx *= minSp / speed;
+        b.vy *= minSp / speed;
+      }
+      if (serveHit && b.vy > -4.2) b.vy = -6.4;
+
+      blob.hitCd = 8;
+      rallyHits += 1;
+      spawnPuff(b.x, b.y);
+      if (phase === "play") {
+        if (blob !== ai) delayBrain(ai, DIFFS[difficulty]);
+        if (blob !== player && autoLeft) delayBrain(player, autoLeft);
+      }
+    }
+
+    function stepBall(b, collideBlobs) {
+      const SUB = 3;
+      for (let s = 0; s < SUB; s += 1) {
+        b.vy += GRAVITY / SUB;
+        b.x += b.vx / SUB;
+        b.y += b.vy / SUB;
+        if (b.y < BALL_R + 6) {
+          b.y = BALL_R + 6;
+          b.vy = Math.abs(b.vy) * 0.7;
+        }
+        if (b.x < BALL_R + 6) {
+          b.x = BALL_R + 6;
+          b.vx = Math.abs(b.vx) * 0.86;
+        } else if (b.x > COURT_W - BALL_R - 6) {
+          b.x = COURT_W - BALL_R - 6;
+          b.vx = -Math.abs(b.vx) * 0.86;
+        }
+        collideNet(b);
+        if (collideBlobs) {
+          resolveBlob(b, player);
+          resolveBlob(b, ai);
+        }
+      }
+    }
+
+    function leadFrames(ballY) {
+      const groundCenter = FLOOR_Y - BLOB_R;
+      const desired = ballY + BLOB_R * 0.42;
+      if (desired >= groundCenter - 6) return 0;
+      let y = groundCenter;
+      let vy = JUMP_V;
+      for (let t = 1; t < 70; t += 1) {
+        vy += BLOB_G;
+        y += vy;
+        if (y <= desired) return t;
+        if (vy > 0) return t;
+      }
+      return 0;
+    }
+
+    function predictIntercept(side) {
+      const sim = { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy };
+      const maxHitY = FLOOR_Y - BLOB_R - 150;
+      const comfortY = FLOOR_Y - BLOB_R - 8;
+      let seen = null;
+      for (let t = 1; t <= 420; t += 1) {
+        stepBall(sim, false);
+        if (sim.y >= FLOOR_Y - BALL_R) {
+          if (seen) return seen;
+          const onSide = side === "left" ? sim.x <= NET_X : sim.x > NET_X;
+          return { x: sim.x, y: FLOOR_Y - BALL_R, t: t, onSide: onSide };
+        }
+        const onSide = side === "left" ? sim.x < NET_X - NET_HALF : sim.x > NET_X + NET_HALF;
+        if (!onSide || sim.vy <= 0) continue;
+        if (!seen && sim.y >= maxHitY) {
+          seen = { x: sim.x, y: sim.y, t: t, onSide: true };
+          if (sim.y >= comfortY) return seen;
+        } else if (seen && sim.y >= comfortY) {
+          return { x: sim.x, y: sim.y, t: t, onSide: true };
+        }
+      }
+      return seen;
+    }
+
+    function think(blob, diff) {
+      const brain = blob.brain;
+      const home = (blob.minX + blob.maxX) * 0.5;
+      const pred = predictIntercept(blob.side);
+      const mistake = Math.random() < diff.mistake;
+      const ballOnSide = blob.side === "left" ? ball.x < NET_X : ball.x > NET_X;
+
+      if (!pred || !pred.onSide || (!diff.predict && !ballOnSide)) {
+        const wander = (Math.random() * 2 - 1) * (mistake ? diff.error : 24);
+        brain.targetX = clamp(home + wander, blob.minX, blob.maxX);
+        brain.jumpFrame = null;
+        return;
+      }
+
+      let noise = (Math.random() * 2 - 1) * diff.error;
+      if (mistake) noise += (Math.random() < 0.5 ? -1 : 1) * (80 + diff.error * 0.25);
+      const aimSign = blob.side === "left" ? -1 : 1;
+      let aim = rallyHits === 0 ? Math.min(diff.aim, 8) : diff.aim;
+      if (diff.aim > 0 && rallyHits > 0) {
+        const foe = blob === player ? ai : player;
+        const foeMid = (foe.minX + foe.maxX) * 0.5;
+        if (foe.x < foeMid) aim += 6;
+        else aim -= 4;
+      }
+      const reach = BLOB_R + BALL_R - 8;
+      const offset = clamp(aimSign * aim + noise, -reach, reach);
+      brain.targetX = clamp(pred.x + offset, blob.minX, blob.maxX);
+
+      if (mistake) {
+        brain.jumpFrame = null;
+        return;
+      }
+
+      const lead = leadFrames(pred.y);
+      if (lead <= 0) {
+        brain.jumpFrame = null;
+        return;
+      }
+      const jitter = diff.jumpJitter ? Math.floor((Math.random() * 2 - 1) * diff.jumpJitter) : 0;
+      const fireIn = pred.t - lead + diff.jumpLate + jitter;
+      if (fireIn <= 0 && fireIn > -10) brain.jumpFrame = tick;
+      else if (fireIn > 0) brain.jumpFrame = tick + fireIn;
+      else brain.jumpFrame = null;
+    }
+
+    function controlAI(blob, diff) {
+      const brain = blob.brain;
+      brain.timer -= 1;
+      if (brain.timer <= 0) {
+        brain.timer = diff.reaction;
+        think(blob, diff);
+      }
+      approach(blob, brain.targetX, SPEED * diff.speed);
+      if (brain.jumpFrame !== null && tick >= brain.jumpFrame && blob.onGround) {
+        hop(blob);
+        brain.jumpFrame = null;
+      }
+    }
+
+    function horizontalIntent() {
+      const left = keys.left || hold.left;
+      const right = keys.right || hold.right;
+      if (left && !right) return -1;
+      if (right && !left) return 1;
+      return 0;
+    }
+
+    function controlHuman(blob) {
+      const dir = horizontalIntent();
+      if (dir !== 0) blob.vx = dir * SPEED;
+      else if (touchX !== null) approach(blob, touchX, SPEED);
+      else if (pointerX !== null) approach(blob, pointerX, SPEED);
+      else blob.vx = 0;
+      if (jumpBuffer > 0 && blob.onGround) {
+        hop(blob);
+        jumpBuffer = 0;
+      }
+    }
+
+    function strollHome(blob) {
+      approach(blob, (blob.minX + blob.maxX) * 0.5, SPEED * 0.45);
+    }
+
+    function moveBlob(blob) {
+      blob.vy += BLOB_G;
+      blob.x += blob.vx;
+      blob.y += blob.vy;
+      if (blob.x < blob.minX) blob.x = blob.minX;
+      if (blob.x > blob.maxX) blob.x = blob.maxX;
+      const ground = FLOOR_Y - BLOB_R;
+      if (blob.y >= ground) {
+        if (blob.vy > 2.2) blob.squash = 1.18;
+        blob.y = ground;
+        blob.vy = 0;
+        blob.onGround = true;
+      } else if (blob.vy < -2) {
+        blob.onGround = false;
+        blob.squash += (0.88 - blob.squash) * 0.25;
+      } else {
+        blob.onGround = false;
+      }
+      blob.squash += (1 - blob.squash) * 0.18;
+      if (blob.hitCd > 0) blob.hitCd -= 1;
+      blob.blink -= 1;
+      if (blob.blink < -7) blob.blink = 70 + Math.floor(Math.random() * 180);
+    }
+
+    function spawnPuff(x, y) {
+      for (let i = 0; i < 6; i += 1) {
+        puffs.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 4.2,
+          vy: (Math.random() - 0.8) * 3.6,
+          life: 1
+        });
+      }
+    }
+
+    function updatePuffs() {
+      for (let i = puffs.length - 1; i >= 0; i -= 1) {
+        const p = puffs[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.045;
+        if (p.life <= 0) puffs.splice(i, 1);
+      }
+    }
+
+    function update() {
+      tick += 1;
+      if (phase === "over") return;
+
+      if (phase === "menu") {
+        controlAI(player, DIFFS.mittel);
+        controlAI(ai, DIFFS.mittel);
+      } else if (phase === "point") {
+        if (autoLeft) controlAI(player, autoLeft);
+        else controlHuman(player);
+        strollHome(ai);
+      } else if (autoLeft) {
+        controlAI(player, autoLeft);
+        controlAI(ai, DIFFS[difficulty]);
+      } else {
+        controlHuman(player);
+        controlAI(ai, DIFFS[difficulty]);
+      }
+
+      if (jumpBuffer > 0) jumpBuffer -= 1;
+
+      if (phase === "point") {
+        moveBlob(player);
+        moveBlob(ai);
+        pointTimer -= 1;
+        if (pointTimer <= 0) beginServe();
+      } else {
+        moveBlob(player);
+        moveBlob(ai);
+        stepBall(ball, true);
+        ball.trail.push({ x: ball.x, y: ball.y });
+        if (ball.trail.length > 8) ball.trail.shift();
+        if (Math.hypot(ball.x - prevBall.x, ball.y - prevBall.y) < 0.35) stillFrames += 1;
+        else stillFrames = 0;
+        prevBall.x = ball.x;
+        prevBall.y = ball.y;
+        if (stillFrames > 100 && (phase === "play" || phase === "menu")) {
+          ball.vy = -6.5;
+          ball.vx = ball.x < NET_X ? 3.2 : -3.2;
+          stillFrames = 0;
+        }
+        if (ball.y >= FLOOR_Y - BALL_R) onFloor();
+      }
+
+      if (bannerTimer > 0) bannerTimer -= 1;
+      updatePuffs();
+    }
+
+    function drawBlob(blob, skin, belly) {
+      const height = FLOOR_Y - BLOB_R - blob.y;
+      const shadowW = BLOB_R * 1.15 * Math.max(0.45, 1 - height / 220);
+      ctx.save();
+      ctx.fillStyle = "rgba(70, 42, 16, 0.18)";
+      ctx.beginPath();
+      ctx.ellipse(blob.x, FLOOR_Y + 4, shadowW, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      const sy = blob.squash;
+      const sx = 1 / Math.sqrt(sy);
+      ctx.save();
+      ctx.translate(blob.x, blob.y + BLOB_R);
+      ctx.scale(sx, sy);
+      ctx.translate(0, -BLOB_R);
+      const grad = ctx.createRadialGradient(-10, -14, 6, 0, 0, BLOB_R + 4);
+      grad.addColorStop(0, "#fff");
+      grad.addColorStop(0.18, belly);
+      grad.addColorStop(0.55, skin);
+      grad.addColorStop(1, skin);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, BLOB_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#241c16";
+      ctx.stroke();
+
+      const look = Math.atan2(ball.y - blob.y, ball.x - blob.x);
+      const closed = blob.blink < 0;
+      ctx.fillStyle = "#fffdf8";
+      ctx.strokeStyle = "#241c16";
+      ctx.lineWidth = 2;
+      [[-12, -6], [12, -6]].forEach((eye) => {
+        ctx.beginPath();
+        if (closed) {
+          ctx.moveTo(eye[0] - 7, eye[1]);
+          ctx.lineTo(eye[0] + 7, eye[1]);
+          ctx.stroke();
+        } else {
+          ctx.ellipse(eye[0], eye[1], 8, 9, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#241c16";
+          ctx.beginPath();
+          ctx.arc(eye[0] + Math.cos(look) * 3, eye[1] + Math.sin(look) * 3, 3.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fffdf8";
+        }
+      });
+
+      ctx.strokeStyle = "#241c16";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (!blob.onGround) {
+        ctx.arc(0, 12, 5, 0, Math.PI * 2);
+      } else {
+        ctx.arc(0, 12, 8, 0.15 * Math.PI, 0.85 * Math.PI);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawBall() {
+      const height = FLOOR_Y - ball.y;
+      ctx.fillStyle = "rgba(70, 42, 16, 0.16)";
+      ctx.beginPath();
+      ctx.ellipse(ball.x, FLOOR_Y + 3, Math.max(6, BALL_R * (1 - height / 380)), 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ball.trail.forEach((p, i) => {
+        ctx.globalAlpha = (i / ball.trail.length) * 0.28;
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, BALL_R * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      ctx.save();
+      ctx.translate(ball.x, ball.y);
+      ctx.rotate(tick * 0.08 * Math.sign(ball.vx || 1));
+      ctx.fillStyle = "#fffdf8";
+      ctx.beginPath();
+      ctx.arc(0, 0, BALL_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#241c16";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.strokeStyle = "#e23d5c";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, BALL_R - 1, -0.9, 0.9);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, BALL_R - 1, Math.PI - 0.7, Math.PI + 0.7);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath();
+      ctx.arc(-4, -5, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawNet() {
+      ctx.fillStyle = "#f4efe4";
+      ctx.strokeStyle = "#241c16";
+      ctx.lineWidth = 3;
+      ctx.fillRect(NET_X - NET_HALF, NET_TOP, NET_HALF * 2, FLOOR_Y - NET_TOP);
+      ctx.strokeRect(NET_X - NET_HALF, NET_TOP, NET_HALF * 2, FLOOR_Y - NET_TOP);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let y = NET_TOP + 8; y < FLOOR_Y; y += 10) {
+        ctx.moveTo(NET_X - NET_HALF, y);
+        ctx.lineTo(NET_X + NET_HALF, y);
+      }
+      ctx.stroke();
+      ctx.fillStyle = "#241c16";
+      ctx.fillRect(NET_X - NET_HALF - 3, NET_TOP - 8, NET_HALF * 2 + 6, 10);
+    }
+
+    function draw() {
+      resize();
+      const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      sky.addColorStop(0, "#6ec8f8");
+      sky.addColorStop(1, "#dff4ff");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      if (shake > 0.4 && !reducedMotion) {
+        ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+        shake *= 0.82;
+      }
+      ctx.translate(view.ox, view.oy);
+      ctx.scale(view.scale, view.scale);
+
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath();
+      ctx.ellipse(150, 78, 46, 22, 0, 0, Math.PI * 2);
+      ctx.ellipse(182, 74, 34, 20, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(760, 96, 54, 22, 0, 0, Math.PI * 2);
+      ctx.ellipse(804, 92, 30, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffe28a";
+      ctx.beginPath();
+      ctx.arc(820, 64, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#7dbe74";
+      ctx.beginPath();
+      ctx.moveTo(-20, FLOOR_Y);
+      ctx.quadraticCurveTo(180, 430, 360, FLOOR_Y);
+      ctx.fill();
+      ctx.fillStyle = "#69a86a";
+      ctx.beginPath();
+      ctx.moveTo(620, FLOOR_Y);
+      ctx.quadraticCurveTo(800, 438, 1000, FLOOR_Y);
+      ctx.fill();
+
+      ctx.fillStyle = "#f0c56e";
+      ctx.fillRect(-40, FLOOR_Y, COURT_W + 80, 240);
+      ctx.fillStyle = "rgba(255, 120, 140, 0.16)";
+      ctx.fillRect(0, FLOOR_Y, NET_X, 28);
+      ctx.fillStyle = "rgba(80, 140, 255, 0.16)";
+      ctx.fillRect(NET_X, FLOOR_Y, COURT_W - NET_X, 28);
+      ctx.strokeStyle = "rgba(36, 28, 22, 0.35)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, FLOOR_Y);
+      ctx.lineTo(COURT_W, FLOOR_Y);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(36, 28, 22, 0.55)";
+      ctx.font = "700 16px Segoe UI, Trebuchet MS, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Du", (LEFT_MIN + LEFT_MAX) / 2, FLOOR_Y + 24);
+      ctx.fillText("KI", (RIGHT_MIN + RIGHT_MAX) / 2, FLOOR_Y + 24);
+
+      ctx.fillStyle = "#241c16";
+      ctx.font = "800 40px Georgia, Palatino, serif";
+      ctx.fillText(scores.player + " : " + scores.ai, NET_X, 58);
+      ctx.font = "700 14px Segoe UI, Trebuchet MS, sans-serif";
+      ctx.fillText("bis " + WIN_SCORE + "  ·  " + DIFFS[difficulty].label, NET_X, 80);
+
+      drawNet();
+      puffs.forEach((p) => {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      drawBall();
+      drawBlob(player, "#ff5d7c", "#ffd0da");
+      drawBlob(ai, "#3b82f6", "#d6e4ff");
+
+      if (bannerTimer > 0 && banner) {
+        ctx.globalAlpha = Math.min(1, bannerTimer / 18);
+        ctx.font = "800 26px Segoe UI, Trebuchet MS, sans-serif";
+        ctx.textAlign = "center";
+        const w = Math.min(520, Math.max(240, ctx.measureText(banner).width + 48));
+        ctx.fillStyle = "rgba(255, 250, 243, 0.92)";
+        ctx.strokeStyle = "#241c16";
+        ctx.lineWidth = 3;
+        roundRect(NET_X - w / 2, 168, w, 64, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#241c16";
+        ctx.fillText(banner, NET_X, 208);
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.restore();
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function gameTarget(event) {
+      const tag = event.target && event.target.tagName;
+      return tag === "BUTTON" || tag === "SELECT" || tag === "A" || tag === "INPUT" || tag === "LABEL";
+    }
+
+    window.addEventListener("keydown", (event) => {
+      const code = event.code;
+      const horizontal = code === "ArrowLeft" || code === "KeyA" || code === "ArrowRight" || code === "KeyD";
+      const jump = code === "ArrowUp" || code === "KeyW" || code === "Space";
+      if (!horizontal && !jump) return;
+      if (gameTarget(event)) return;
+      event.preventDefault();
+      if (event.repeat) return;
+      if (code === "ArrowLeft" || code === "KeyA") keys.left = true;
+      if (code === "ArrowRight" || code === "KeyD") keys.right = true;
+      if (horizontal) hideHint();
+      if (jump) requestJump();
+    });
+
+    window.addEventListener("keyup", (event) => {
+      if (event.code === "ArrowLeft" || event.code === "KeyA") keys.left = false;
+      if (event.code === "ArrowRight" || event.code === "KeyD") keys.right = false;
+    });
+
+    window.addEventListener("blur", () => {
+      keys.left = false;
+      keys.right = false;
+      hold.left = false;
+      hold.right = false;
+    });
+
+    canvas.addEventListener("pointerdown", (event) => {
+      canvas.focus({ preventScroll: true });
+      if (event.pointerType === "touch") {
+        ignoreMouseUntil = performance.now() + 800;
+        pointerX = null;
+        canvas.setPointerCapture(event.pointerId);
+        touches.set(event.pointerId, { x: event.clientX, y: event.clientY, t: performance.now(), jumped: false });
+        touchX = clamp(clientToWorld(event.clientX, event.clientY).x, LEFT_MIN, LEFT_MAX);
+        pad.classList.add("is-on");
+        hideHint();
+        return;
+      }
+      if (performance.now() < ignoreMouseUntil) return;
+      pointerX = clientToWorld(event.clientX, event.clientY).x;
+      requestJump();
+      hideHint();
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (event.pointerType === "touch") {
+        const rec = touches.get(event.pointerId);
+        if (!rec) return;
+        const dx = event.clientX - rec.x;
+        const dy = rec.y - event.clientY;
+        if (!rec.jumped && dy > 28 && dy > Math.abs(dx)) {
+          requestJump();
+          rec.jumped = true;
+        }
+        touchX = clamp(clientToWorld(event.clientX, event.clientY).x, LEFT_MIN, LEFT_MAX);
+        return;
+      }
+      if (performance.now() < ignoreMouseUntil) return;
+      const world = clientToWorld(event.clientX, event.clientY);
+      pointerX = world.x;
+    });
+
+    function endTouch(event) {
+      const rec = touches.get(event.pointerId);
+      if (!rec) return;
+      touches.delete(event.pointerId);
+      const dx = event.clientX - rec.x;
+      const dy = event.clientY - rec.y;
+      const dist = Math.hypot(dx, dy);
+      if (!rec.jumped && dist < 22 && performance.now() - rec.t < 280) requestJump();
+      if (touches.size === 0) touchX = null;
+    }
+
+    canvas.addEventListener("pointerup", endTouch);
+    canvas.addEventListener("pointercancel", endTouch);
+
+    canvas.addEventListener("pointerleave", (event) => {
+      if (event.pointerType !== "touch") pointerX = null;
+    });
+
+    function bindHold(button, key) {
+      const press = (event) => {
+        event.preventDefault();
+        hold[key] = true;
+        button.classList.add("is-held");
+        try { button.setPointerCapture(event.pointerId); } catch (err) { /* already gone */ }
+        hideHint();
+      };
+      const release = () => {
+        hold[key] = false;
+        button.classList.remove("is-held");
+      };
+      button.addEventListener("pointerdown", press);
+      button.addEventListener("pointerup", release);
+      button.addEventListener("pointercancel", release);
+      button.addEventListener("lostpointercapture", release);
+    }
+
+    bindHold(document.getElementById("btn-left"), "left");
+    bindHold(document.getElementById("btn-right"), "right");
+    const jumpBtn = document.getElementById("btn-jump");
+    jumpBtn.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      requestJump();
+      jumpBtn.classList.add("is-held");
+    });
+    jumpBtn.addEventListener("pointerup", () => jumpBtn.classList.remove("is-held"));
+    jumpBtn.addEventListener("pointercancel", () => jumpBtn.classList.remove("is-held"));
+
+    document.querySelectorAll("[data-diff]").forEach((btn) => {
+      btn.addEventListener("click", () => setDifficulty(btn.dataset.diff));
+    });
+    diffSelect.addEventListener("change", () => {
+      setDifficulty(diffSelect.value);
+      if (phase === "play" || phase === "point") {
+        ai.brain.timer = 0;
+        ai.brain.jumpFrame = null;
+        announce("Schwierigkeit: " + DIFFS[difficulty].label);
+        canvas.focus({ preventScroll: true });
+      }
+    });
+
+    document.getElementById("start").addEventListener("click", startMatch);
+    document.getElementById("again").addEventListener("click", startMatch);
+    document.getElementById("restart").addEventListener("click", startMatch);
+
+    const coarse = window.matchMedia("(pointer: coarse), (any-pointer: coarse)");
+    const syncHint = () => {
+      if (hintHidden) return;
+      const touch = coarse.matches || pad.classList.contains("is-on");
+      liveHint.textContent = touch
+        ? "Ziehen zum Laufen, tippen oder nach oben wischen zum Springen. Unten sind auch Tasten."
+        : "Maus bewegen, Klick springt. Pfeile oder WASD, Leertaste springt.";
+    };
+    coarse.addEventListener("change", syncHint);
+    syncHint();
+
+    window.addEventListener("resize", resize);
+    setDifficulty("leicht");
+    refreshScore();
+    serveFrom("left");
+    resize();
+
+    let last = 0;
+    let acc = 0;
+    function loop(now) {
+      if (!last) last = now;
+      let delta = now - last;
+      last = now;
+      if (delta > 80) delta = 80;
+      acc += delta;
+      let guard = 0;
+      while (acc >= 16.6667 && guard < 4) {
+        update();
+        acc -= 16.6667;
+        guard += 1;
+      }
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    window.__volley = {
+      setDifficulty: setDifficulty,
+      setAutoLeft: function (id) { autoLeft = id ? DIFFS[id] : null; },
+      setAutoLeftRaw: function (diff) { autoLeft = diff; },
+      start: startMatch,
+      step: function (n) {
+        for (let i = 0; i < n; i += 1) update();
+      },
+      snapshot: function () {
+        return {
+          phase: phase,
+          player: scores.player,
+          ai: scores.ai,
+          difficulty: difficulty,
+          rallyHits: rallyHits,
+          ballX: ball.x,
+          ballY: ball.y,
+          ballVx: ball.vx,
+          ballVy: ball.vy,
+          playerX: player.x,
+          aiX: ai.x,
+          playerY: player.y,
+          aiY: ai.y,
+          lastRally: lastRally,
+          points: pointsLog.slice()
+        };
+      }
+    };
+  </script>
+</body>
+</html>
