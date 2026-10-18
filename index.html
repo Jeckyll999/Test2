@@ -1,8 +1,904 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="hello Amanda — ein kleines Regal-Sortierspiel.">
   <title>hello Amanda</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%84%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #241c16;
+      --muted: #6d5c4d;
+      --paper: #f4e2c8;
+      --card: #fffaf3;
+      --tomato: #c2412d;
+      --good: #e7f6df;
+      --bad: #fde2dc;
+      --lip: #8a5a32;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      min-height: 100dvh;
+      color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", "Gill Sans", "Helvetica Neue", sans-serif;
+      background-color: var(--paper);
+      background-image:
+        radial-gradient(circle at 12% 0%, #fff6e8 0, transparent 36%),
+        radial-gradient(circle at 100% 100%, #efd0a8 0, transparent 32%);
+      padding:
+        18px
+        max(14px, env(safe-area-inset-right))
+        max(22px, env(safe-area-inset-bottom))
+        max(14px, env(safe-area-inset-left));
+    }
+
+    button { font: inherit; color: inherit; }
+
+    .app {
+      width: min(920px, 100%);
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px 18px;
+      flex-wrap: wrap;
+    }
+
+    .hello {
+      margin: 0 0 2px;
+      color: var(--tomato);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      font-size: 0.98rem;
+    }
+
+    h1, h2 {
+      font-family: Georgia, "Palatino Linotype", Palatino, serif;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 3.15rem);
+    }
+
+    h2 { margin: 0 0 8px; font-size: clamp(1.7rem, 4vw, 2.2rem); }
+
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      background: rgba(255, 250, 243, 0.88);
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .hearts { letter-spacing: 0.08em; }
+    .heart.on { color: var(--tomato); }
+    .heart.off { color: #b5a394; }
+
+    .ghost {
+      background: transparent;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .ghost:hover { background: var(--card); }
+
+    .panel {
+      margin-top: 16px;
+      background: var(--card);
+      border: 3px solid var(--ink);
+      border-radius: 24px;
+      box-shadow: 8px 8px 0 var(--ink);
+      padding: 22px 20px 20px;
+    }
+
+    .panel p { margin: 0 0 10px; line-height: 1.45; }
+
+    .rules {
+      margin: 0 0 14px;
+      padding-left: 1.15rem;
+      line-height: 1.45;
+    }
+
+    .rules li + li { margin-top: 4px; }
+
+    .scoreline {
+      font-weight: 800;
+      min-height: 1.2em;
+    }
+
+    .go {
+      appearance: none;
+      background: var(--ink);
+      color: var(--card);
+      border: 3px solid var(--ink);
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 800;
+      font-size: 1.05rem;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 #c48a52;
+    }
+
+    .go:hover { transform: translate(-1px, -1px); }
+    .go:active { transform: translate(1px, 1px); box-shadow: none; }
+
+    .board { margin-top: 14px; }
+    .board.is-locked { pointer-events: none; }
+
+    .feedback {
+      margin: 0 0 12px;
+      min-height: 3.3em;
+      background: var(--card);
+      border: 2px solid var(--ink);
+      border-radius: 16px;
+      padding: 10px 12px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .feedback.good { background: var(--good); }
+    .feedback.bad { background: var(--bad); }
+
+    .shelves {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .shelf {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-height: 118px;
+      padding: 10px 8px 12px;
+      border: 0;
+      border-radius: 16px 16px 10px 10px;
+      cursor: pointer;
+      color: var(--ink);
+      background-image:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.28), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.06)),
+        repeating-linear-gradient(90deg, rgba(120, 70, 30, 0.06) 0 2px, transparent 2px 8px),
+        linear-gradient(#f0d2a8, #d7a56c);
+      box-shadow: 0 8px 0 var(--lip), 0 14px 18px rgba(60, 32, 12, 0.12);
+    }
+
+    .shelf::before {
+      content: "";
+      width: 46px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--c);
+    }
+
+    .shelf:hover { box-shadow: 0 10px 0 var(--lip), 0 16px 18px rgba(60, 32, 12, 0.16); }
+    .shelf:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+    .shelf.hot {
+      outline: 3px dashed var(--ink);
+      outline-offset: 3px;
+      transform: translateY(-3px);
+    }
+
+    .shelf.yep { animation: bounce 0.4s ease; }
+    .shelf.nope { animation: shake 0.35s ease; }
+    .shelf.hint { animation: pulse 0.7s ease; }
+
+    .shelf-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+    }
+
+    .num {
+      display: inline-grid;
+      place-items: center;
+      width: 1.4rem;
+      height: 1.4rem;
+      border-radius: 999px;
+      background: var(--ink);
+      color: var(--card);
+      font-size: 0.8rem;
+    }
+
+    .shelf-emoji { font-size: 1.3rem; line-height: 1; }
+    .shelf-name { font-weight: 800; }
+
+    .placed {
+      min-height: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .chip { font-size: 1.2rem; line-height: 1.2; animation: pop 0.35s ease; }
+
+    .pit { margin-top: 16px; text-align: center; }
+    .pit-label {
+      margin: 0 0 8px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .slot { min-height: 168px; display: grid; place-items: center; }
+
+    .item {
+      width: min(320px, 100%);
+      background: var(--card);
+      border: 3px solid var(--ink);
+      border-radius: 22px;
+      box-shadow: 6px 6px 0 var(--ink);
+      padding: 14px 16px 16px;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      position: relative;
+      z-index: 2;
+    }
+
+    .item.dragging {
+      cursor: grabbing;
+      z-index: 30;
+      box-shadow: 10px 16px 0 rgba(36, 28, 22, 0.25);
+    }
+
+    .item.empty { cursor: default; box-shadow: none; }
+
+    .item .emoji { display: block; font-size: 3.2rem; line-height: 1.1; }
+    .item .name { display: block; font-weight: 800; font-size: 1.12rem; margin-top: 4px; }
+    .item .blurb { display: block; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+
+    .item.enter { animation: enter 0.35s ease; }
+    .item.shake { animation: shake 0.35s ease; }
+
+    .help {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .fine {
+      margin: 18px 0 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .floater {
+      position: fixed;
+      z-index: 40;
+      font-weight: 800;
+      color: #1f7a3a;
+      pointer-events: none;
+      animation: floatup 0.7s ease forwards;
+      text-shadow: 0 1px 0 #fff;
+    }
+
+    @keyframes enter {
+      from { transform: translateY(12px) scale(0.96); opacity: 0; }
+      to { transform: none; opacity: 1; }
+    }
+
+    @keyframes pop {
+      from { transform: scale(0.4); }
+      to { transform: scale(1); }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-8px); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+
+    @keyframes pulse {
+      50% { box-shadow: 0 8px 0 var(--lip), 0 0 0 4px var(--c); }
+    }
+
+    @keyframes floatup {
+      from { transform: translate(-50%, 0); opacity: 1; }
+      to { transform: translate(-50%, -28px); opacity: 0; }
+    }
+
+    @media (max-width: 560px) {
+      .shelf { min-height: 104px; }
+      .item .emoji { font-size: 2.7rem; }
+      .hud { justify-content: flex-start; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
 </head>
-<body>hello Amanda</body>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <p class="hello">hello Amanda</p>
+        <h1>Regal-Roulette</h1>
+      </div>
+      <div class="hud">
+        <div class="pill hearts" id="hearts" aria-live="polite"></div>
+        <div class="pill" id="level">Stufe 1</div>
+        <div class="pill" id="progress">–</div>
+        <div class="pill">Punkte <strong id="score">0</strong></div>
+        <div class="pill" id="streak" hidden>Serie 0</div>
+        <div class="pill" id="best" hidden>Rekord 0</div>
+        <button type="button" class="ghost" id="restart" hidden>Neustart</button>
+      </div>
+    </header>
+
+    <section class="panel" id="panel">
+      <h2 id="panel-title">Regal-Roulette</h2>
+      <p id="panel-text"></p>
+      <ul class="rules" id="rules">
+        <li>Jedes Ding gehört auf genau ein Regal.</li>
+        <li>Zieh es rüber oder tipp das Regal an.</li>
+        <li>Drei Fehler, und das Regal gewinnt.</li>
+      </ul>
+      <p class="scoreline" id="scoreline"></p>
+      <button type="button" class="go" id="go">Ich sortier das</button>
+    </section>
+
+    <div class="board" id="board" hidden>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <div class="shelves" id="shelves"></div>
+      <div class="pit">
+        <p class="pit-label">Chaoskiste</p>
+        <div class="slot">
+          <div class="item empty" id="item"></div>
+        </div>
+        <p class="help" id="help">Ziehen, Regal antippen oder eine Zahlentaste.</p>
+      </div>
+    </div>
+
+    <p class="fine">Kein Regal wurde beim Spielen verletzt. Fast.</p>
+  </div>
+
+  <script>
+    const BEST_KEY = "regal-roulette-best";
+
+    const SHELVES = {
+      kueche: { emoji: "🍳", name: "Küche", into: "in die Küche", color: "#e25b45" },
+      bad: { emoji: "🛁", name: "Bad", into: "ins Bad", color: "#2f8fbf" },
+      garten: { emoji: "🌱", name: "Garten", into: "in den Garten", color: "#3c9a55" },
+      keller: { emoji: "🔧", name: "Keller", into: "in den Keller", color: "#d0892c" },
+      geheim: { emoji: "✨", name: "Geheimfach", into: "ins Geheimfach", color: "#8a5ad6" }
+    };
+
+    const ITEMS = [
+      { shelf: "kueche", emoji: "🍌", name: "Die dramatische Banane", blurb: "Verlangt die Obstschale. Sofort, und mit Applaus." },
+      { shelf: "kueche", emoji: "🥪", name: "Ein müdes Käsebrot", blurb: "Seit gestern unterwegs. Die Küche ist das Sofa." },
+      { shelf: "kueche", emoji: "☕", name: "Die Tasse mit Meinung", blurb: "Kommentiert jeden Schluck. Steht neben der Kanne." },
+      { shelf: "kueche", emoji: "🍝", name: "Spaghetti auf Abwegen", blurb: "Wollten zum Teller und landeten im Flur." },
+      { shelf: "kueche", emoji: "🧀", name: "Käse, der zurückstarrt", blurb: "Reif, urteilsfähig, gehört in den Kühlschrank." },
+      { shelf: "bad", emoji: "🦆", name: "Quietschente mit Termin", blurb: "Die Wanne ist ihr Büro. Pünktlich zum Planschen." },
+      { shelf: "bad", emoji: "🪥", name: "Montags-Zahnbürste", blurb: "Arbeitet selten. Wohnt trotzdem am Waschbecken." },
+      { shelf: "bad", emoji: "🧴", name: "Shampoo für Gedanken", blurb: "Neben die andere Flasche, die auch nichts kann." },
+      { shelf: "bad", emoji: "🧼", name: "Seife auf der Flucht", blurb: "Rutscht lieber in der Dusche als irgendwo sonst." },
+      { shelf: "bad", emoji: "🪞", name: "Ehrlicher Spiegel", blurb: "Sagt die Wahrheit. Hängt überm Waschbecken." },
+      { shelf: "garten", emoji: "🌵", name: "Beleidigter Kaktus", blurb: "Braucht Sonne, Abstand und ganz klar draußen." },
+      { shelf: "garten", emoji: "🌻", name: "Sonnenblume mit Geheimnis", blurb: "Dreht sich nur, wenn niemand in den Garten guckt." },
+      { shelf: "garten", emoji: "🪱", name: "Regenwurm mit Hut", blurb: "Verwechselt den Blumentopf mit einer Wohnung." },
+      { shelf: "garten", emoji: "🪣", name: "Gießkanne voller Ausreden", blurb: "Immer leer, immer draußen, immer fast am Gießen." },
+      { shelf: "garten", emoji: "👢", name: "Linker Gummistiefel", blurb: "Der rechte ist im Urlaub. Dieser bleibt im Beet." },
+      { shelf: "keller", emoji: "🪛", name: "Linksdreh-Schraubenzieher", blurb: "Tut nur das Gegenteil. Ab auf die Werkbank." },
+      { shelf: "keller", emoji: "🔦", name: "Taschenlampe ohne Licht", blurb: "Dafür mit Haltung. Liegt unten bei den Werkzeugen." },
+      { shelf: "keller", emoji: "🔑", name: "Schlüssel zu nichts", blurb: "Passt in kein Schloss. Trotzdem in die Schublade unten." },
+      { shelf: "keller", emoji: "📦", name: "Karton „Wichtig!!“", blurb: "Inhalt unbekannt. Wohnt seit 2014 ganz unten." },
+      { shelf: "keller", emoji: "🔋", name: "Müde Batterien", blurb: "Kein Saft, viel Meinung. Ab in die Kiste unten." },
+      { shelf: "geheim", emoji: "👽", name: "Socken-Alien", blurb: "Eine Socke, die sich weiterentwickelt hat. Eigenes Fach." },
+      { shelf: "geheim", emoji: "🦄", name: "Einhorn-Ersatzteil", blurb: "Für Notfälle, die es nicht gibt. Nicht anfassen, nur verstecken." },
+      { shelf: "geheim", emoji: "📜", name: "Vertrag mit dem Kühlschrank", blurb: "Unsichtbare Tinte. Dafür ist kein normales Regal zuständig." },
+      { shelf: "geheim", emoji: "🪄", name: "Zauberstab aus Kabelbindern", blurb: "Wirkt nur freitags, und auch dann kaum. Geheim bleibt geheim." },
+      { shelf: "geheim", emoji: "👻", name: "Freundliches Staubgespenst", blurb: "Will nicht gesaugt werden. Es hat ein eigenes Fach." }
+    ];
+
+    const LEVELS = [
+      {
+        shelves: ["kueche", "bad", "garten"],
+        count: 6,
+        start: "Drei Regale. Such dir das richtige aus.",
+        clearTitle: "Stufe 1 geschafft",
+        clearText: "Küche, Bad und Garten sind still. Unten raschelt der Keller und will mitspielen.",
+        clearButton: "Keller aufmachen"
+      },
+      {
+        shelves: ["kueche", "bad", "garten", "keller"],
+        count: 8,
+        start: "Der Keller ist offen. Er urteilt nicht. Meistens.",
+        clearTitle: "Stufe 2 geschafft",
+        clearText: "Der Keller ist sortiert. Ein Geheimfach knarrt — dort kommt hin, was nirgends sonst darf.",
+        clearButton: "Fach öffnen"
+      },
+      {
+        shelves: ["kueche", "bad", "garten", "keller", "geheim"],
+        count: 8,
+        start: "Manches gehört in kein normales Regal. Dafür gibt es das Geheimfach.",
+        clearTitle: "",
+        clearText: "",
+        clearButton: ""
+      }
+    ];
+
+    const PRAISE = [
+      "Sitzt. Das Regal atmet aus.",
+      "Richtig. Sogar der Staub klatscht.",
+      "Amanda wäre zufrieden.",
+      "Endlich ein Ding mit Plan.",
+      "Sortiert, als wäre es Absicht.",
+      "Das Regal knarzt zufrieden."
+    ];
+
+    const OOPS = ["Hoppla.", "Nein.", "Autsch.", "Knapp daneben."];
+
+    const heartsEl = document.getElementById("hearts");
+    const levelEl = document.getElementById("level");
+    const progressEl = document.getElementById("progress");
+    const scoreEl = document.getElementById("score");
+    const streakEl = document.getElementById("streak");
+    const bestEl = document.getElementById("best");
+    const restartBtn = document.getElementById("restart");
+    const panel = document.getElementById("panel");
+    const panelTitle = document.getElementById("panel-title");
+    const panelText = document.getElementById("panel-text");
+    const rules = document.getElementById("rules");
+    const scoreline = document.getElementById("scoreline");
+    const goBtn = document.getElementById("go");
+    const board = document.getElementById("board");
+    const feedback = document.getElementById("feedback");
+    const shelvesEl = document.getElementById("shelves");
+    const itemEl = document.getElementById("item");
+
+    const state = {
+      mode: "modal",
+      panel: "start",
+      level: 0,
+      score: 0,
+      best: loadBest(),
+      lives: 3,
+      streak: 0,
+      queue: [],
+      index: 0,
+      busy: false
+    };
+
+    let drag = null;
+    let timer = 0;
+    let lastPick = { praise: -1, oops: -1 };
+
+    function loadBest() {
+      try {
+        return Number(localStorage.getItem(BEST_KEY)) || 0;
+      } catch (err) {
+        return 0;
+      }
+    }
+
+    function saveBest() {
+      if (state.score > state.best) state.best = state.score;
+      try {
+        localStorage.setItem(BEST_KEY, String(state.best));
+      } catch (err) {
+        /* private mode can block storage */
+      }
+    }
+
+    function shuffle(list) {
+      const arr = list.slice();
+      for (let i = arr.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const swap = arr[i];
+        arr[i] = arr[j];
+        arr[j] = swap;
+      }
+      return arr;
+    }
+
+    function pickFresh(list, key) {
+      let index = Math.floor(Math.random() * list.length);
+      if (list.length > 1 && index === lastPick[key]) index = (index + 1) % list.length;
+      lastPick[key] = index;
+      return list[index];
+    }
+
+    function later(fn, ms) {
+      clearTimeout(timer);
+      timer = setTimeout(fn, ms);
+    }
+
+    function currentItem() {
+      return state.queue[state.index] || null;
+    }
+
+    function dealItems(shelves, count) {
+      const pool = ITEMS.filter((item) => shelves.includes(item.shelf));
+      const buckets = {};
+      shelves.forEach((id) => {
+        buckets[id] = shuffle(pool.filter((item) => item.shelf === id));
+      });
+      const picked = [];
+      shelves.forEach((id) => {
+        if (picked.length < count && buckets[id].length) picked.push(buckets[id].pop());
+      });
+      const rest = shuffle(Object.values(buckets).reduce((all, bucket) => all.concat(bucket), []));
+      while (picked.length < count && rest.length) picked.push(rest.pop());
+      return shuffle(picked);
+    }
+
+    function updateHud() {
+      levelEl.textContent = "Stufe " + (state.level + 1);
+      if (state.queue.length) {
+        const shown = Math.min(state.index + 1, state.queue.length);
+        progressEl.textContent = shown + " von " + state.queue.length;
+      } else {
+        progressEl.textContent = "–";
+      }
+      scoreEl.textContent = String(state.score);
+      streakEl.hidden = state.streak < 2;
+      streakEl.textContent = "Serie " + state.streak;
+      bestEl.hidden = state.best <= 0;
+      bestEl.textContent = "Rekord " + state.best;
+      heartsEl.setAttribute("aria-label", state.lives + " von 3 Herzen");
+      heartsEl.replaceChildren();
+      for (let i = 0; i < 3; i += 1) {
+        const span = document.createElement("span");
+        const on = i < state.lives;
+        span.className = on ? "heart on" : "heart off";
+        span.textContent = on ? "♥" : "♡";
+        heartsEl.appendChild(span);
+      }
+      restartBtn.hidden = state.mode !== "play";
+    }
+
+    function setFeedback(text, kind) {
+      feedback.textContent = text;
+      feedback.className = "feedback" + (kind ? " " + kind : "");
+    }
+
+    function renderShelves() {
+      const shelves = LEVELS[state.level].shelves;
+      shelvesEl.replaceChildren();
+      shelves.forEach((id, index) => {
+        const shelf = SHELVES[id];
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "shelf";
+        button.dataset.shelf = id;
+        button.style.setProperty("--c", shelf.color);
+        button.setAttribute("aria-label", shelf.name + ", Taste " + (index + 1));
+
+        const top = document.createElement("span");
+        top.className = "shelf-top";
+        const num = document.createElement("span");
+        num.className = "num";
+        num.textContent = String(index + 1);
+        const emoji = document.createElement("span");
+        emoji.className = "shelf-emoji";
+        emoji.setAttribute("aria-hidden", "true");
+        emoji.textContent = shelf.emoji;
+        top.append(num, emoji);
+
+        const name = document.createElement("span");
+        name.className = "shelf-name";
+        name.textContent = shelf.name;
+
+        const placed = document.createElement("span");
+        placed.className = "placed";
+        placed.dataset.placed = id;
+
+        button.append(top, name, placed);
+        shelvesEl.appendChild(button);
+      });
+    }
+
+    function renderItem() {
+      const item = currentItem();
+      itemEl.classList.remove("enter", "shake", "empty", "dragging");
+      itemEl.style.transform = "";
+      itemEl.style.animation = "";
+      itemEl.replaceChildren();
+      if (!item) {
+        itemEl.classList.add("empty");
+        return;
+      }
+      const emoji = document.createElement("span");
+      emoji.className = "emoji";
+      emoji.setAttribute("aria-hidden", "true");
+      emoji.textContent = item.emoji;
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = item.name;
+      const blurb = document.createElement("span");
+      blurb.className = "blurb";
+      blurb.textContent = item.blurb;
+      itemEl.append(emoji, name, blurb);
+      itemEl.classList.add("enter");
+    }
+
+    function showPanel(kind) {
+      state.mode = "modal";
+      state.panel = kind;
+      panel.hidden = false;
+      rules.hidden = kind !== "start";
+      if (kind === "start") {
+        board.hidden = true;
+        panelTitle.textContent = "Regal-Roulette";
+        panelText.textContent = "In der Chaoskiste liegt Krempel mit Persönlichkeit. Sortier ihn, bevor das Regal zurücksortiert.";
+        goBtn.textContent = "Ich sortier das";
+        scoreline.textContent = state.best > 0 ? "Rekord: " + state.best + " Punkte" : "";
+      } else if (kind === "level") {
+        board.hidden = false;
+        board.classList.add("is-locked");
+        const info = LEVELS[state.level];
+        panelTitle.textContent = info.clearTitle;
+        panelText.textContent = info.clearText + " Bonus: 30 Punkte.";
+        goBtn.textContent = info.clearButton;
+        scoreline.textContent = "Punkte: " + state.score + (state.best ? " · Rekord: " + state.best : "");
+      } else if (kind === "win") {
+        board.hidden = false;
+        board.classList.add("is-locked");
+        panelTitle.textContent = "Alle Regale sind zufrieden";
+        panelText.textContent = "hello Amanda, das Chaos hat sich hingelegt. Sogar das Geheimfach schweigt.";
+        goBtn.textContent = "Nochmal von vorn";
+        scoreline.textContent = "Punkte: " + state.score + (state.best ? " · Rekord: " + state.best : "");
+      } else {
+        board.hidden = false;
+        board.classList.add("is-locked");
+        panelTitle.textContent = "Das Regal hat gewonnen";
+        panelText.textContent = "Drei Treffer daneben. Irgendwo lacht ein Kaktus. Leise.";
+        goBtn.textContent = "Noch ein Versuch";
+        scoreline.textContent = "Punkte: " + state.score + (state.best ? " · Rekord: " + state.best : "");
+      }
+      updateHud();
+      goBtn.focus();
+    }
+
+    function deal() {
+      clearTimeout(timer);
+      state.busy = false;
+      state.mode = "play";
+      const level = LEVELS[state.level];
+      state.queue = dealItems(level.shelves, level.count);
+      state.index = 0;
+      panel.hidden = true;
+      board.hidden = false;
+      board.classList.remove("is-locked");
+      renderShelves();
+      renderItem();
+      setFeedback(level.start, "");
+      document.getElementById("help").textContent =
+        "Ziehen, Regal antippen oder Taste 1–" + level.shelves.length + ".";
+      updateHud();
+    }
+
+    function startGame() {
+      state.level = 0;
+      state.score = 0;
+      state.lives = 3;
+      state.streak = 0;
+      deal();
+    }
+
+    function flashShelf(id, cls) {
+      const el = shelvesEl.querySelector('[data-shelf="' + id + '"]');
+      if (!el) return;
+      el.classList.remove(cls);
+      void el.offsetWidth;
+      el.classList.add(cls);
+      setTimeout(() => el.classList.remove(cls), 700);
+    }
+
+    function dropChip(shelfId, emoji) {
+      const box = shelvesEl.querySelector('[data-placed="' + shelfId + '"]');
+      if (!box) return;
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = emoji;
+      box.appendChild(chip);
+    }
+
+    function floatAt(el, text) {
+      const rect = el.getBoundingClientRect();
+      const node = document.createElement("span");
+      node.className = "floater";
+      node.textContent = text;
+      node.style.left = rect.left + rect.width / 2 + "px";
+      node.style.top = rect.top + "px";
+      document.body.appendChild(node);
+      setTimeout(() => node.remove(), 800);
+    }
+
+    function onLevelClear() {
+      state.score += 30;
+      saveBest();
+      if (state.level >= LEVELS.length - 1) {
+        showPanel("win");
+        return;
+      }
+      showPanel("level");
+    }
+
+    function place(shelfId) {
+      if (state.mode !== "play" || state.busy) return;
+      const item = currentItem();
+      if (!item) return;
+      state.busy = true;
+      const shelfEl = shelvesEl.querySelector('[data-shelf="' + shelfId + '"]');
+
+      if (shelfId === item.shelf) {
+        state.streak += 1;
+        const gain = state.streak % 3 === 0 ? 25 : 10;
+        state.score += gain;
+        saveBest();
+        dropChip(shelfId, item.emoji);
+        flashShelf(shelfId, "yep");
+        if (shelfEl) floatAt(shelfEl, "+" + gain);
+        setFeedback(pickFresh(PRAISE, "praise"), "good");
+        state.index += 1;
+        updateHud();
+        if (state.index >= state.queue.length) {
+          later(onLevelClear, 450);
+          return;
+        }
+        later(() => {
+          renderItem();
+          state.busy = false;
+          updateHud();
+        }, 280);
+        return;
+      }
+
+      state.streak = 0;
+      state.lives -= 1;
+      flashShelf(shelfId, "nope");
+      flashShelf(item.shelf, "hint");
+      itemEl.classList.remove("enter", "shake");
+      void itemEl.offsetWidth;
+      itemEl.classList.add("shake");
+      setFeedback(
+        pickFresh(OOPS, "oops") + " " + item.name + " gehört " + SHELVES[item.shelf].into + ", nicht " + SHELVES[shelfId].into + ".",
+        "bad"
+      );
+      updateHud();
+      if (state.lives <= 0) {
+        later(() => {
+          saveBest();
+          showPanel("lose");
+        }, 450);
+        return;
+      }
+      later(() => {
+        state.busy = false;
+      }, 420);
+    }
+
+    function markHot(id) {
+      shelvesEl.querySelectorAll(".shelf").forEach((shelf) => {
+        shelf.classList.toggle("hot", shelf.dataset.shelf === id);
+      });
+    }
+
+    function shelfAt(x, y) {
+      const previous = itemEl.style.visibility;
+      itemEl.style.visibility = "hidden";
+      const el = document.elementFromPoint(x, y);
+      itemEl.style.visibility = previous;
+      const shelf = el && el.closest("[data-shelf]");
+      return shelf ? shelf.dataset.shelf : null;
+    }
+
+    function endDrag() {
+      drag = null;
+      itemEl.classList.remove("dragging");
+      itemEl.style.transform = "";
+      itemEl.style.animation = "";
+      markHot(null);
+    }
+
+    itemEl.addEventListener("pointerdown", (event) => {
+      if (state.mode !== "play" || state.busy) return;
+      if (event.button !== undefined && event.button !== 0) return;
+      if (!currentItem()) return;
+      event.preventDefault();
+      itemEl.classList.remove("shake", "enter");
+      itemEl.style.animation = "none";
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+      itemEl.classList.add("dragging");
+      try {
+        itemEl.setPointerCapture(event.pointerId);
+      } catch (err) {
+        /* some browsers reject capture during odd pointer states */
+      }
+    });
+
+    itemEl.addEventListener("pointermove", (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) > 6) drag.moved = true;
+      itemEl.style.transform = "translate(" + dx + "px, " + dy + "px) rotate(-2deg)";
+      markHot(shelfAt(event.clientX, event.clientY));
+    });
+
+    itemEl.addEventListener("pointerup", (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const shelf = drag.moved ? shelfAt(event.clientX, event.clientY) : null;
+      endDrag();
+      if (shelf) place(shelf);
+    });
+
+    itemEl.addEventListener("pointercancel", endDrag);
+
+    shelvesEl.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-shelf]");
+      if (!button) return;
+      place(button.dataset.shelf);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (state.mode !== "play" || state.busy) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const n = Number(event.key);
+      const shelves = LEVELS[state.level].shelves;
+      if (n >= 1 && n <= shelves.length) {
+        event.preventDefault();
+        place(shelves[n - 1]);
+      }
+    });
+
+    goBtn.addEventListener("click", () => {
+      if (state.panel === "level") {
+        state.level += 1;
+        state.lives = 3;
+        state.streak = 0;
+        deal();
+        return;
+      }
+      startGame();
+    });
+
+    restartBtn.addEventListener("click", startGame);
+
+    updateHud();
+    showPanel("start");
+  </script>
+</body>
 </html>
