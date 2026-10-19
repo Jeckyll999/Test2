@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="hello Amanda — zwei kleine Spiele: Regal-Roulette und Klecks Volley.">
+  <meta name="description" content="hello Amanda — drei kleine Spiele: Regal-Roulette, Klecks Volley und Feenherz.">
   <title>hello Amanda</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
   <style>
@@ -228,20 +228,132 @@
       40% { transform: translateY(-18px); }
     }
 
+    @keyframes drift {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(10px); }
+    }
+
     @keyframes lob {
       0% { left: 24%; bottom: 70px; }
       45% { left: 48%; bottom: 112px; }
       100% { left: 70%; bottom: 64px; }
     }
 
+    .fairy-stage {
+      background: linear-gradient(#f8c5ea, #d9d4ff 42%, #c6f1ff 72%, #ffe7a8 72%);
+      overflow: hidden;
+    }
+
+    .bow {
+      position: absolute;
+      left: 18%;
+      top: 18px;
+      width: 92px;
+      height: 46px;
+      border: 7px solid transparent;
+      border-top-color: #ff9eb8;
+      border-radius: 50%;
+      transform: rotate(8deg);
+    }
+
+    .bow::before,
+    .bow::after {
+      content: "";
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      height: 7px;
+      border-radius: 999px;
+    }
+
+    .bow::before { top: 8px; background: #ffe08a; }
+    .bow::after { top: 18px; background: #9ee6ff; }
+
+    .f-cloud {
+      position: absolute;
+      background: #fff;
+      border: 3px solid #241c16;
+      border-radius: 999px;
+      height: 22px;
+    }
+
+    .f-cloud::before,
+    .f-cloud::after {
+      content: "";
+      position: absolute;
+      background: #fff;
+      border: 3px solid #241c16;
+      border-radius: 50%;
+    }
+
+    .f-cloud.a { width: 54px; top: 22px; right: 18%; animation: drift 4.8s ease-in-out infinite; }
+    .f-cloud.a::before { width: 16px; height: 16px; top: -10px; left: 8px; }
+    .f-cloud.a::after { width: 20px; height: 20px; top: -12px; left: 22px; }
+    .f-cloud.b { width: 40px; top: 48px; right: 38%; opacity: 0.95; }
+
+    .f-plat {
+      position: absolute;
+      bottom: 18px;
+      height: 18px;
+      border: 3px solid #241c16;
+      border-radius: 999px;
+      background: linear-gradient(#fff, #fff 40%, #ffb7d5 41%);
+    }
+
+    .f-plat.p1 { left: 8%; width: 28%; }
+    .f-plat.p2 { left: 40%; width: 18%; bottom: 48px; background: linear-gradient(#fff, #fff 40%, #c9b6ff 41%); }
+    .f-plat.p3 { right: 8%; width: 26%; }
+
+    .f-fairy {
+      position: absolute;
+      left: 14%;
+      bottom: 30px;
+      width: 36px;
+      height: 36px;
+      animation: hop 1.8s ease-in-out infinite;
+    }
+
+    .f-wing {
+      position: absolute;
+      top: 6px;
+      width: 16px;
+      height: 22px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 2px solid #241c16;
+      border-radius: 70% 70% 40% 40%;
+    }
+
+    .f-wing.l { left: -10px; transform: rotate(-24deg); }
+    .f-wing.r { right: -10px; transform: rotate(24deg); }
+
+    .f-body {
+      position: absolute;
+      left: 4px;
+      top: 2px;
+      width: 28px;
+      height: 28px;
+      background: #ffd0e4;
+      border: 3px solid #241c16;
+      border-radius: 50% 50% 46% 46%;
+    }
+
+    .f-heart {
+      position: absolute;
+      right: 16%;
+      bottom: 40px;
+      font-size: 1.35rem;
+      animation: hop 1.8s ease-in-out 0.2s infinite;
+    }
+
     @media (min-width: 760px) {
       .games { grid-template-columns: 1fr 1fr; }
       .card { min-height: 360px; }
+      .card-feature { grid-column: 1 / -1; }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .card { transition: none; }
-      .blob, .ball { animation: none; }
+      .blob, .ball, .f-fairy, .f-heart, .f-cloud.a { animation: none; }
     }
   </style>
 </head>
@@ -250,7 +362,7 @@
     <header>
       <p class="hello">Spielwiese</p>
       <h1>hello Amanda</h1>
-      <p class="lede">Zwei Spiele, kein Download. Eins zum Sortieren, eins zum Hüpfen. Such dir aus, womit du anfängst.</p>
+      <p class="lede">Drei Spiele, kein Download. Eins zum Sortieren, eins zum Hüpfen, eins für die Fee. Such dir aus, womit du anfängst.</p>
     </header>
 
     <div class="games">
@@ -280,6 +392,29 @@
           <div class="net"></div>
           <div class="blob you"><span class="face">◕‿◕</span></div>
           <div class="blob cpu"><span class="face">◕‿◕</span></div>
+        </div>
+      </a>
+
+      <a class="card card-feature" href="feenherz.html">
+        <div class="card-body">
+          <p class="kicker">Springen</p>
+          <h2>Feenherz</h2>
+          <p>Lilia hat ihr Herz verloren. Lauf, spring und sammle Herzen, bevor die Zeit abläuft. Löcher, Dornen und dunkle Magie warten auf der Wiese.</p>
+          <span class="play">Spielen</span>
+        </div>
+        <div class="stage fairy-stage" aria-hidden="true">
+          <div class="bow"></div>
+          <div class="f-cloud a"></div>
+          <div class="f-cloud b"></div>
+          <div class="f-plat p1"></div>
+          <div class="f-plat p2"></div>
+          <div class="f-plat p3"></div>
+          <div class="f-fairy">
+            <i class="f-wing l"></i>
+            <i class="f-wing r"></i>
+            <i class="f-body"></i>
+          </div>
+          <div class="f-heart">♥</div>
         </div>
       </a>
     </div>
