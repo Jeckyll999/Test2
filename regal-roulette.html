@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="hello Amanda — Regal-Roulette, ein kleines Regal-Sortierspiel.">
-  <title>hello Amanda</title>
+  <meta name="description" content="Regal-Roulette, ein kleines Regal-Sortierspiel.">
+  <title>Regal-Roulette</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%84%EF%B8%8F%3C/text%3E%3C/svg%3E">
   <style>
     :root {
@@ -367,7 +367,7 @@
     <header>
       <div>
         <a class="back" href="index.html">Zurück zur Übersicht</a>
-        <p class="hello">hello Amanda</p>
+        <p class="hello">Spielewelt</p>
         <h1>Regal-Roulette</h1>
       </div>
       <div class="hud">
@@ -477,7 +477,7 @@
     const PRAISE = [
       "Sitzt. Das Regal atmet aus.",
       "Richtig. Sogar der Staub klatscht.",
-      "Amanda wäre zufrieden.",
+      "Das Regal wäre zufrieden.",
       "Endlich ein Ding mit Plan.",
       "Sortiert, als wäre es Absicht.",
       "Das Regal knarzt zufrieden."
@@ -692,7 +692,7 @@
         board.hidden = false;
         board.classList.add("is-locked");
         panelTitle.textContent = "Alle Regale sind zufrieden";
-        panelText.textContent = "hello Amanda, das Chaos hat sich hingelegt. Sogar das Geheimfach schweigt.";
+        panelText.textContent = "Das Chaos hat sich hingelegt. Sogar das Geheimfach schweigt.";
         goBtn.textContent = "Nochmal von vorn";
         scoreline.textContent = "Punkte: " + state.score + (state.best ? " · Rekord: " + state.best : "");
       } else {
