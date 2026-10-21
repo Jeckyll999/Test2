@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Neon-Duell: ein Licht-Duell gegen die KI. Zuerst 7 Punkte.">
+  <title>Neon-Duell</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23070b16'/%3E%3Crect x='16' y='30' width='8' height='40' rx='3' fill='%237dfff8'/%3E%3Crect x='76' y='30' width='8' height='40' rx='3' fill='%23ffb15a'/%3E%3Ccircle cx='50' cy='50' r='6' fill='%23ffffff'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #241c16;
+      --muted: #6d5c4d;
+      --card: #fffaf3;
+      --paper: #fff6ea;
+      --tomato: #c2412d;
+      --cyan: #128a96;
+      --orange: #c45b12;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; height: 100%; }
+
+    body {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", "Gill Sans", "Helvetica Neue", sans-serif;
+      background: #070b16;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    button, select { font: inherit; color: inherit; }
+
+    header {
+      flex: 0 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 10px;
+      padding:
+        max(8px, env(safe-area-inset-top))
+        max(10px, env(safe-area-inset-right))
+        8px
+        max(10px, env(safe-area-inset-left));
+      background: var(--paper);
+      border-bottom: 3px solid var(--ink);
+    }
+
+    .back {
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 800;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #fff;
+      white-space: nowrap;
+    }
+
+    .back-short { display: none; }
+    .back:hover { background: var(--card); }
+    .back:focus-visible, button:focus-visible, select:focus-visible {
+      outline: 3px solid var(--tomato);
+      outline-offset: 2px;
+    }
+
+    .titles { min-width: 0; }
+    .hello {
+      margin: 0;
+      color: var(--tomato);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      line-height: 1.1;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Palatino Linotype", Palatino, serif;
+      font-size: 1.15rem;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .score {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-left: auto;
+      font-weight: 800;
+      font-size: 1.05rem;
+      background: #fff;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 4px 12px;
+    }
+
+    .score strong { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+    .score .you strong { color: var(--cyan); }
+    .score .cpu strong { color: var(--orange); }
+    .colon { opacity: 0.55; }
+
+    .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    select, .ghost {
+      background: #fff;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 800;
+    }
+
+    .ghost { cursor: pointer; }
+    .ghost:hover { background: var(--card); }
+    .ghost[aria-pressed="true"] { background: var(--ink); color: #fff; }
+
+    .live-hint {
+      flex-basis: 100%;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .stage {
+      flex: 1 1 auto;
+      min-height: 0;
+      position: relative;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      background: #070b16;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: none;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      background: rgba(4, 8, 18, 0.55);
+      overflow: auto;
+    }
+
+    .overlay[hidden], .screen[hidden] { display: none; }
+
+    .dialog {
+      width: min(560px, 100%);
+      background: var(--card);
+      border: 3px solid var(--ink);
+      border-radius: 24px;
+      box-shadow: 8px 8px 0 #12323a;
+      padding: 18px 16px 16px;
+    }
+
+    .dialog h2 {
+      margin: 0 0 8px;
+      font-family: Georgia, "Palatino Linotype", Palatino, serif;
+      font-size: clamp(1.7rem, 5vw, 2.3rem);
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+
+    .dialog p { margin: 0 0 10px; line-height: 1.4; }
+
+    .label {
+      margin: 4px 0 8px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .diffs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .diffs button {
+      text-align: left;
+      background: #fff;
+      border: 2px solid var(--ink);
+      border-radius: 16px;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+
+    .diffs button strong { display: block; }
+    .diffs button span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .diffs button.is-on { background: var(--ink); color: #fff; }
+    .diffs button.is-on span { color: #f0d8c4; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    .go {
+      appearance: none;
+      background: var(--ink);
+      color: #fff;
+      border: 3px solid var(--ink);
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 800;
+      font-size: 1.05rem;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 #1aa8b5;
+    }
+
+    .go:hover { transform: translate(-1px, -1px); }
+    .go:active { transform: translate(1px, 1px); box-shadow: none; }
+
+    .help {
+      margin: 12px 0 0;
+      padding-left: 1.1rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    @media (max-height: 520px) {
+      .live-hint, .help { display: none; }
+      h1 { font-size: 1rem; }
+      .dialog { padding: 12px; }
+    }
+
+    @media (max-width: 720px) {
+      header {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+      }
+      .back { grid-column: 1; }
+      .titles { grid-column: 2; }
+      .score { grid-column: 3; margin-left: 0; justify-self: end; }
+      .tools { grid-column: 1 / -1; }
+      .live-hint { grid-column: 1 / -1; }
+      .back-long { display: none; }
+      .back-short { display: inline; }
+      h1 { font-size: 1.02rem; }
+      .score { font-size: 0.95rem; padding: 3px 8px; }
+      .score strong { font-size: 1.15rem; }
+    }
+
+    @media (max-width: 420px) {
+      .dialog { padding: 14px 12px 12px; }
+      .dialog h2 { font-size: 1.45rem; }
+      .diffs button span { display: none; }
+    }
+
+    @media (max-height: 430px) {
+      .diffs { grid-template-columns: repeat(4, 1fr); }
+      .diffs button span { display: none; }
+      .diffs button { text-align: center; padding: 8px 4px; }
+      .help, .live-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back" href="index.html" aria-label="Zurück zur Übersicht"><span class="back-long">Zurück zur Übersicht</span><span class="back-short">← Übersicht</span></a>
+    <div class="titles">
+      <p class="hello">Spielewelt</p>
+      <h1>Neon-Duell</h1>
+    </div>
+    <div class="score" aria-live="polite">
+      <span class="you">Du <strong id="score-you">0</strong></span>
+      <span class="colon">:</span>
+      <span class="cpu"><strong id="score-ai">0</strong> KI</span>
+    </div>
+    <div class="tools">
+      <label>
+        <span class="sr">Schwierigkeit</span>
+        <select id="difficulty">
+          <option value="leicht">Leicht</option>
+          <option value="mittel" selected>Mittel</option>
+          <option value="schwer">Schwer</option>
+          <option value="unmoeglich">Unmöglich</option>
+        </select>
+      </label>
+      <button type="button" class="ghost" id="pause">Pause</button>
+      <button type="button" class="ghost" id="mute" aria-pressed="false">Ton an</button>
+      <button type="button" class="ghost" id="restart">Neustart</button>
+    </div>
+    <p class="live-hint" id="live-hint">Maus bewegt den Schläger. W und S oder die Pfeile. Auf dem Handy ziehen.</p>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="court" width="960" height="540" aria-label="Neon-Duell. Du steuerst den linken Leuchtstab."></canvas>
+    <div class="overlay" id="overlay">
+      <div class="dialog screen" id="screen-start" data-screen="start">
+        <h2>Neon-Duell</h2>
+        <p>Zwei Leuchtstäbe, eine Kugel. Du links in Cyan, die KI rechts in Orange. Wer zuerst 7 Punkte hat, behält das Licht.</p>
+        <p class="label">Schwierigkeit</p>
+        <div class="diffs" role="group" aria-label="Schwierigkeit">
+          <button type="button" data-diff="leicht"><strong>Leicht</strong><span>Träge KI, große Lücken.</span></button>
+          <button type="button" data-diff="mittel" class="is-on" aria-pressed="true"><strong>Mittel</strong><span>Hält mit, verpasst enge Bälle.</span></button>
+          <button type="button" data-diff="schwer"><strong>Schwer</strong><span>Liest die Flugbahn.</span></button>
+          <button type="button" data-diff="unmoeglich"><strong>Unmöglich</strong><span>Fast keine Lücke.</span></button>
+        </div>
+        <div class="actions">
+          <button type="button" class="go" id="start">Duell starten</button>
+          <a class="back" href="index.html">Zurück zur Übersicht</a>
+        </div>
+        <ul class="help">
+          <li>Rechner: Maus in der Höhe folgen lassen. W und S oder Pfeil hoch und runter.</li>
+          <li>Handy: den linken Schläger mit dem Finger ziehen.</li>
+          <li>P pausiert. Der Ton lässt sich stummschalten.</li>
+        </ul>
+      </div>
+      <div class="dialog screen" id="screen-pause" data-screen="pause" hidden>
+        <h2>Pause</h2>
+        <p>Das Licht wartet. Wenn du soweit bist, geht das Duell weiter.</p>
+        <div class="actions">
+          <button type="button" class="go" id="resume">Weiter</button>
+          <a class="back" href="index.html">Zurück zur Übersicht</a>
+        </div>
+      </div>
+      <div class="dialog screen" id="screen-end" data-screen="end" hidden>
+        <h2 id="end-title">Duell vorbei</h2>
+        <p id="end-text"></p>
+        <p id="end-score"></p>
+        <div class="actions">
+          <button type="button" class="go" id="again">Nochmal spielen</button>
+          <a class="back" href="index.html">Zurück zur Übersicht</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="sr" id="announce" aria-live="polite"></p>
+
+  <script>
+    "use strict";
+
+    const W = 960;
+    const H = 540;
+    const PADDLE_W = 14;
+    const PADDLE_H = 104;
+    const BALL_R = 9;
+    const WIN = 7;
+    const PLAYER_X = 48;
+    const AI_X = W - 48 - PADDLE_W;
+
+    const DIFF = {
+      leicht: { speed: 210, react: 0.36, error: 100, predict: false, miss: 0.22 },
+      mittel: { speed: 340, react: 0.14, error: 42, predict: true, miss: 0.05 },
+      schwer: { speed: 540, react: 0.055, error: 14, predict: true, miss: 0 },
+      unmoeglich: { speed: 920, react: 0.016, error: 2, predict: true, miss: 0 }
+    };
+
+    const canvas = document.getElementById("court");
+    const ctx = canvas.getContext("2d");
+    const stage = document.getElementById("stage");
+    const overlay = document.getElementById("overlay");
+    const scoreYou = document.getElementById("score-you");
+    const scoreAi = document.getElementById("score-ai");
+    const announce = document.getElementById("announce");
+    const diffSelect = document.getElementById("difficulty");
+    const pauseBtn = document.getElementById("pause");
+    const muteBtn = document.getElementById("mute");
+    const hint = document.getElementById("live-hint");
+
+    const player = { y: (H - PADDLE_H) / 2, prevY: 0 };
+    const ai = { y: (H - PADDLE_H) / 2, target: (H - PADDLE_H) / 2, error: 0, prevY: 0 };
+    const ball = { x: W / 2, y: H / 2, vx: 0, vy: 0, speed: 420 };
+    const trail = [];
+    const parts = [];
+
+    let mode = "menu";
+    let diffId = "mittel";
+    let you = 0;
+    let cpu = 0;
+    let serveLeft = 0;
+    let serveDir = 1;
+    let pointerTarget = null;
+    let pointerDown = false;
+    let activePointer = null;
+    let keyUp = false;
+    let keyDown = false;
+    let muted = false;
+    let audioCtx = null;
+    let cssW = 960;
+    let cssH = 540;
+    let dpr = 1;
+    let last = performance.now();
+
+    try {
+      muted = localStorage.getItem("neon-duell-mute") === "1";
+    } catch (err) { /* ignore */ }
+
+    function say(text) { announce.textContent = text; }
+
+    function syncMute() {
+      muteBtn.textContent = muted ? "Ton aus" : "Ton an";
+      muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
+    }
+
+    function showScreen(which) {
+      overlay.hidden = which === "none";
+      document.querySelectorAll(".screen").forEach(function (el) {
+        el.hidden = el.dataset.screen !== which;
+      });
+      pauseBtn.disabled = which === "start" || which === "end";
+    }
+
+    function selectDiff(id) {
+      if (!DIFF[id]) return;
+      diffId = id;
+      diffSelect.value = id;
+      document.querySelectorAll("[data-diff]").forEach(function (btn) {
+        const on = btn.dataset.diff === id;
+        btn.classList.toggle("is-on", on);
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
+
+    function syncScore() {
+      scoreYou.textContent = String(you);
+      scoreAi.textContent = String(cpu);
+    }
+
+    function unlockAudio() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
+
+    function tone(freq, dur, type, gain) {
+      if (muted || !audioCtx) return;
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const amp = audioCtx.createGain();
+      osc.type = type || "square";
+      osc.frequency.setValueAtTime(freq, t);
+      amp.gain.setValueAtTime(gain || 0.045, t);
+      amp.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+      osc.connect(amp);
+      amp.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    }
+
+    function playHit(kind) {
+      if (kind === "you") tone(560, 0.07, "square", 0.05);
+      else if (kind === "ai") tone(340, 0.07, "square", 0.045);
+      else tone(190, 0.05, "triangle", 0.04);
+    }
+
+    function playScore(playerScored) {
+      if (playerScored) {
+        tone(660, 0.08, "square", 0.05);
+        setTimeout(function () { tone(880, 0.12, "square", 0.04); }, 90);
+      } else {
+        tone(220, 0.1, "sawtooth", 0.04);
+        setTimeout(function () { tone(140, 0.14, "sawtooth", 0.035); }, 90);
+      }
+    }
+
+    function playWin(playerWon) {
+      const notes = playerWon ? [523, 659, 784] : [392, 330, 262];
+      notes.forEach(function (freq, i) {
+        setTimeout(function () { tone(freq, 0.16, "square", 0.05); }, i * 120);
+      });
+    }
+
+    function burst(x, y, color) {
+      for (let i = 0; i < 10; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 50 + Math.random() * 160;
+        parts.push({
+          x: x, y: y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 0.28 + Math.random() * 0.2,
+          age: 0,
+          color: color
+        });
+      }
+    }
+
+    function resetBall(dir) {
+      ball.x = W / 2;
+      ball.y = H / 2;
+      ball.vx = 0;
+      ball.vy = 0;
+      ball.speed = 430;
+      serveDir = dir || (Math.random() < 0.5 ? -1 : 1);
+      serveLeft = 0.7;
+      trail.length = 0;
+    }
+
+    function launch() {
+      const angle = (Math.random() * 0.7 - 0.35);
+      ball.speed = 430;
+      ball.vx = Math.cos(angle) * ball.speed * serveDir;
+      ball.vy = Math.sin(angle) * ball.speed;
+      ai.error = rollError();
+    }
+
+    function rollError() {
+      const d = DIFF[diffId];
+      let err = (Math.random() * 2 - 1) * d.error;
+      if (Math.random() < d.miss) err += (Math.random() < 0.5 ? -1 : 1) * (PADDLE_H * 0.85);
+      return err;
+    }
+
+    function clampPaddle(y) {
+      return Math.max(18, Math.min(H - 18 - PADDLE_H, y));
+    }
+
+    function predictY(x, y, vx, vy, xTarget) {
+      const minY = BALL_R + 16;
+      const maxY = H - BALL_R - 16;
+      let guard = 0;
+      while (vx > 20 && x < xTarget && guard < 10) {
+        const tGoal = (xTarget - x) / vx;
+        let tWall = Infinity;
+        if (vy > 1) tWall = (maxY - y) / vy;
+        else if (vy < -1) tWall = (minY - y) / vy;
+        if (tWall > 0 && tWall < tGoal) {
+          x += vx * tWall;
+          y += vy * tWall;
+          vy = -vy;
+        } else {
+          y += vy * tGoal;
+          break;
+        }
+        guard++;
+      }
+      return y;
+    }
+
+    function deflect(paddle, dir) {
+      const rel = (ball.y - (paddle.y + PADDLE_H / 2)) / (PADDLE_H / 2);
+      const clamped = Math.max(-1, Math.min(1, rel));
+      const angle = clamped * 1.02;
+      const spin = (paddle.y - paddle.prevY) * 1.6;
+      ball.speed = Math.min(920, ball.speed * 1.055 + 8);
+      ball.vx = Math.cos(angle) * ball.speed * dir;
+      ball.vy = Math.sin(angle) * ball.speed + spin;
+      const maxVy = ball.speed * 0.86;
+      if (ball.vy > maxVy) ball.vy = maxVy;
+      if (ball.vy < -maxVy) ball.vy = -maxVy;
+      const mag = Math.hypot(ball.vx, ball.vy) || 1;
+      ball.vx = ball.vx / mag * ball.speed;
+      ball.vy = ball.vy / mag * ball.speed;
+      if (dir > 0) ball.x = PLAYER_X + PADDLE_W + BALL_R + 1;
+      else ball.x = AI_X - BALL_R - 1;
+      ai.error = rollError();
+    }
+
+    function hitsPaddle(paddle, x, goingRight, prevX, prevY) {
+      const y0 = Math.min(prevY, ball.y) - BALL_R;
+      const y1 = Math.max(prevY, ball.y) + BALL_R;
+      if (y1 < paddle.y || y0 > paddle.y + PADDLE_H) return false;
+      if (!goingRight) {
+        const face = x + PADDLE_W;
+        return ball.vx < 0 && prevX + BALL_R >= face - 2 && ball.x - BALL_R <= face;
+      }
+      return ball.vx > 0 && prevX - BALL_R <= x + 2 && ball.x + BALL_R >= x;
+    }
+
+    function score(playerScored) {
+      if (playerScored) you += 1;
+      else cpu += 1;
+      syncScore();
+      playScore(playerScored);
+      burst(ball.x, ball.y, playerScored ? "#ffb15a" : "#7dfff8");
+      if (you >= WIN || cpu >= WIN) {
+        mode = "end";
+        const won = you > cpu;
+        document.getElementById("end-title").textContent = won ? "Du behältst das Licht" : "Die KI behält das Licht";
+        document.getElementById("end-text").textContent = won
+          ? "Der rechte Stab erlischt. Sauber gespielt."
+          : "Dein Stab flackert. Nochmal, wenn du willst.";
+        document.getElementById("end-score").textContent = "Stand " + you + " : " + cpu;
+        showScreen("end");
+        say(won ? "Du gewinnst " + you + " zu " + cpu + "." : "Die KI gewinnt " + cpu + " zu " + you + ".");
+        playWin(won);
+        return;
+      }
+      say((playerScored ? "Punkt für dich. " : "Punkt für die KI. ") + you + " zu " + cpu + ".");
+      mode = "serve";
+      resetBall(playerScored ? 1 : -1);
+    }
+
+    function updatePlayer(dt) {
+      player.prevY = player.y;
+      if (keyUp || keyDown) {
+        const dir = (keyDown ? 1 : 0) - (keyUp ? 1 : 0);
+        player.y = clampPaddle(player.y + dir * 680 * dt);
+        pointerTarget = null;
+      } else if (pointerTarget != null) {
+        const next = pointerTarget - PADDLE_H / 2;
+        player.y += (next - player.y) * Math.min(1, dt * 22);
+        player.y = clampPaddle(player.y);
+      }
+    }
+
+    function updateAi(dt) {
+      const d = DIFF[diffId];
+      ai.prevY = ai.y;
+      let dest = (H - PADDLE_H) / 2;
+      if (ball.vx > 0 && (mode === "play" || mode === "menu")) {
+        const aim = d.predict ? predictY(ball.x, ball.y, ball.vx, ball.vy, AI_X) : ball.y;
+        dest = aim - PADDLE_H / 2 + (mode === "menu" ? 0 : ai.error);
+      }
+      const k = 1 - Math.exp(-dt / Math.max(0.01, d.react));
+      ai.target += (dest - ai.target) * k;
+      const dy = ai.target - ai.y;
+      const step = d.speed * dt;
+      if (Math.abs(dy) <= step) ai.y = ai.target;
+      else ai.y += Math.sign(dy) * step;
+      ai.y = clampPaddle(ai.y);
+    }
+
+    function updateBall(dt, live) {
+      if (mode === "serve") {
+        serveLeft -= dt;
+        ball.x = W / 2;
+        ball.y = H / 2 + Math.sin(performance.now() / 180) * 10;
+        if (serveLeft <= 0) {
+          mode = "play";
+          launch();
+        }
+        return;
+      }
+      const prevX = ball.x;
+      const prevY = ball.y;
+      ball.x += ball.vx * dt;
+      ball.y += ball.vy * dt;
+      if (ball.y - BALL_R <= 16 && ball.vy < 0) {
+        ball.y = 16 + BALL_R;
+        ball.vy *= -1;
+        if (live) { playHit("wall"); burst(ball.x, ball.y, "#9ad7ff"); }
+      } else if (ball.y + BALL_R >= H - 16 && ball.vy > 0) {
+        ball.y = H - 16 - BALL_R;
+        ball.vy *= -1;
+        if (live) { playHit("wall"); burst(ball.x, ball.y, "#9ad7ff"); }
+      }
+      if (hitsPaddle(player, PLAYER_X, false, prevX, prevY)) {
+        deflect(player, 1);
+        if (live) { playHit("you"); burst(ball.x, ball.y, "#7dfff8"); }
+      } else if (hitsPaddle(ai, AI_X, true, prevX, prevY)) {
+        deflect(ai, -1);
+        if (live) { playHit("ai"); burst(ball.x, ball.y, "#ffb15a"); }
+      }
+      if (live && ball.x < -BALL_R) score(false);
+      else if (live && ball.x > W + BALL_R) score(true);
+      else if (!live) {
+        if (ball.x - BALL_R < 28 && ball.vx < 0) {
+          ball.x = 28 + BALL_R;
+          ball.vx *= -1;
+        } else if (ball.x + BALL_R > W - 28 && ball.vx > 0) {
+          ball.x = W - 28 - BALL_R;
+          ball.vx *= -1;
+        }
+      }
+      trail.push({ x: ball.x, y: ball.y });
+      if (trail.length > 16) trail.shift();
+    }
+
+    function updateParts(dt) {
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p = parts[i];
+        p.age += dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.age >= p.life) parts.splice(i, 1);
+      }
+    }
+
+    function step(dt) {
+      if (mode === "pause" || mode === "end") {
+        updateParts(dt);
+        return;
+      }
+      if (mode === "menu") {
+        if (Math.abs(ball.vx) < 10) {
+          ball.speed = 280;
+          ball.vx = 280;
+          ball.vy = 90;
+        }
+        updatePlayer(dt);
+        updateAi(dt);
+        updateBall(dt, false);
+        updateParts(dt);
+        return;
+      }
+      updatePlayer(dt);
+      updateAi(dt);
+      updateBall(dt, true);
+      updateParts(dt);
+    }
+
+    function resize() {
+      const rect = stage.getBoundingClientRect();
+      cssW = Math.max(2, rect.width);
+      cssH = Math.max(2, rect.height);
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+    }
+
+    function view() {
+      const scale = Math.min(cssW / W, cssH / H);
+      return {
+        scale: scale,
+        ox: (cssW - W * scale) / 2,
+        oy: (cssH - H * scale) / 2
+      };
+    }
+
+    function worldFromClient(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const v = view();
+      return {
+        x: (clientX - rect.left - v.ox) / v.scale,
+        y: (clientY - rect.top - v.oy) / v.scale
+      };
+    }
+
+    function roundRect(g, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      g.beginPath();
+      g.moveTo(x + rr, y);
+      g.arcTo(x + w, y, x + w, y + h, rr);
+      g.arcTo(x + w, y + h, x, y + h, rr);
+      g.arcTo(x, y + h, x, y, rr);
+      g.arcTo(x, y, x + w, y, rr);
+      g.closePath();
+    }
+
+    function drawGrid(g) {
+      const floor = 150;
+      g.save();
+      g.beginPath();
+      g.rect(0, floor, W, H - floor);
+      g.clip();
+      g.strokeStyle = "rgba(80, 255, 245, 0.16)";
+      g.lineWidth = 1;
+      const vpX = W * 0.34;
+      const vpY = floor - 40;
+      for (let i = -12; i <= 18; i++) {
+        g.beginPath();
+        g.moveTo(vpX, vpY);
+        g.lineTo(i * 80, H);
+        g.stroke();
+      }
+      g.strokeStyle = "rgba(255, 150, 70, 0.14)";
+      const vpR = W * 0.66;
+      for (let i = -6; i <= 22; i++) {
+        g.beginPath();
+        g.moveTo(vpR, vpY);
+        g.lineTo(i * 80, H);
+        g.stroke();
+      }
+      for (let i = 1; i <= 9; i++) {
+        const t = i / 9;
+        const y = floor + (H - floor) * t * t;
+        g.strokeStyle = i % 2 ? "rgba(90, 255, 245, 0.13)" : "rgba(255, 150, 70, 0.1)";
+        g.beginPath();
+        g.moveTo(0, y);
+        g.lineTo(W, y);
+        g.stroke();
+      }
+      g.restore();
+    }
+
+    function drawPaddle(g, x, y, color, glow) {
+      g.save();
+      g.shadowColor = glow;
+      g.shadowBlur = 18;
+      g.fillStyle = color;
+      roundRect(g, x, y, PADDLE_W, PADDLE_H, 6);
+      g.fill();
+      g.shadowBlur = 0;
+      g.fillStyle = "rgba(255,255,255,0.85)";
+      roundRect(g, x + 3, y + 8, 3, PADDLE_H - 16, 2);
+      g.fill();
+      g.restore();
+    }
+
+    function draw() {
+      const g = ctx;
+      const v = view();
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.fillStyle = "#070b16";
+      g.fillRect(0, 0, cssW, cssH);
+      g.save();
+      g.translate(v.ox, v.oy);
+      g.scale(v.scale, v.scale);
+
+      const bg = g.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, "#10182e");
+      bg.addColorStop(0.45, "#070b16");
+      bg.addColorStop(1, "#061018");
+      g.fillStyle = bg;
+      g.fillRect(0, 0, W, H);
+      drawGrid(g);
+
+      g.strokeStyle = "rgba(125, 255, 248, 0.35)";
+      g.lineWidth = 2;
+      g.strokeRect(14, 14, W - 28, H - 28);
+      g.strokeStyle = "rgba(255, 177, 90, 0.28)";
+      g.beginPath();
+      g.moveTo(W / 2, 28);
+      g.lineTo(W / 2, H - 28);
+      g.setLineDash([10, 14]);
+      g.stroke();
+      g.setLineDash([]);
+
+      g.globalCompositeOperation = "lighter";
+      for (let i = 0; i < trail.length; i++) {
+        const t = trail[i];
+        const a = (i + 1) / trail.length;
+        g.fillStyle = "rgba(180, 255, 250, " + (a * 0.35) + ")";
+        g.beginPath();
+        g.arc(t.x, t.y, BALL_R * (0.4 + a * 0.7), 0, Math.PI * 2);
+        g.fill();
+      }
+      parts.forEach(function (p) {
+        const a = 1 - p.age / p.life;
+        g.globalAlpha = Math.max(0, a);
+        g.fillStyle = p.color;
+        g.fillRect(p.x, p.y, 3, 3);
+      });
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = "source-over";
+
+      drawPaddle(g, PLAYER_X, player.y, "#8ffff8", "#39fff4");
+      drawPaddle(g, AI_X, ai.y, "#ffc27a", "#ff8a2a");
+
+      g.save();
+      g.shadowColor = "#ffffff";
+      g.shadowBlur = 16;
+      g.fillStyle = "#f7fbff";
+      g.beginPath();
+      g.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+
+      if (mode === "serve") {
+        g.fillStyle = "rgba(232, 251, 255, 0.9)";
+        g.font = "700 28px Trebuchet MS, Segoe UI, sans-serif";
+        g.textAlign = "center";
+        g.fillText("Bereit", W / 2, H * 0.32);
+      }
+      g.restore();
+    }
+
+    function frame(now) {
+      let dt = (now - last) / 1000;
+      last = now;
+      if (!isFinite(dt) || dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
+      step(dt);
+      draw();
+      requestAnimationFrame(frame);
+    }
+
+    function beginMatch() {
+      you = 0;
+      cpu = 0;
+      syncScore();
+      player.y = (H - PADDLE_H) / 2;
+      ai.y = player.y;
+      ai.target = ai.y;
+      ai.error = 0;
+      mode = "serve";
+      resetBall(Math.random() < 0.5 ? -1 : 1);
+      showScreen("none");
+      if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+      say("Duell läuft. Zuerst " + WIN + " Punkte.");
+    }
+
+    function togglePause() {
+      if (mode === "play" || mode === "serve") {
+        mode = "pause";
+        showScreen("pause");
+        say("Pause.");
+      } else if (mode === "pause") {
+        mode = serveLeft > 0 ? "serve" : "play";
+        showScreen("none");
+        say("Weiter.");
+      }
+    }
+
+    function setPointer(e) {
+      const p = worldFromClient(e.clientX, e.clientY);
+      pointerTarget = p.y;
+    }
+
+    canvas.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      activePointer = e.pointerId;
+      pointerDown = true;
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      setPointer(e);
+      unlockAudio();
+      e.preventDefault();
+    });
+
+    canvas.addEventListener("pointermove", function (e) {
+      const mouse = e.pointerType === "mouse";
+      if (mouse || (pointerDown && e.pointerId === activePointer)) setPointer(e);
+    });
+
+    function endPointer(e) {
+      if (e.pointerId === activePointer) {
+        activePointer = null;
+        pointerDown = false;
+      }
+    }
+
+    canvas.addEventListener("pointerup", endPointer);
+    canvas.addEventListener("pointercancel", endPointer);
+
+    window.addEventListener("keydown", function (e) {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === "SELECT") return;
+      if (e.code === "ArrowUp" || e.code === "KeyW") {
+        keyUp = true;
+        e.preventDefault();
+      } else if (e.code === "ArrowDown" || e.code === "KeyS") {
+        keyDown = true;
+        e.preventDefault();
+      } else if (e.code === "KeyP" && !e.repeat) {
+        togglePause();
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener("keyup", function (e) {
+      if (e.code === "ArrowUp" || e.code === "KeyW") keyUp = false;
+      if (e.code === "ArrowDown" || e.code === "KeyS") keyDown = false;
+    });
+
+    window.addEventListener("blur", function () {
+      keyUp = false;
+      keyDown = false;
+    });
+
+    document.querySelectorAll("[data-diff]").forEach(function (btn) {
+      btn.addEventListener("click", function () { selectDiff(btn.dataset.diff); });
+    });
+    diffSelect.addEventListener("change", function () { selectDiff(diffSelect.value); });
+
+    document.getElementById("start").addEventListener("click", function () {
+      unlockAudio();
+      beginMatch();
+    });
+    document.getElementById("again").addEventListener("click", function () {
+      unlockAudio();
+      beginMatch();
+    });
+    document.getElementById("resume").addEventListener("click", togglePause);
+    pauseBtn.addEventListener("click", togglePause);
+    document.getElementById("restart").addEventListener("click", function () {
+      unlockAudio();
+      beginMatch();
+    });
+    muteBtn.addEventListener("click", function () {
+      muted = !muted;
+      syncMute();
+      try { localStorage.setItem("neon-duell-mute", muted ? "1" : "0"); } catch (err) { /* ignore */ }
+      if (!muted) unlockAudio();
+    });
+
+    const coarse = window.matchMedia("(pointer: coarse), (any-pointer: coarse)");
+    function updateHint() {
+      hint.textContent = coarse.matches
+        ? "Zieh den linken Schläger mit dem Finger. W und S oder die Pfeile gehen auch."
+        : "Maus bewegt den Schläger. W und S oder die Pfeile. Auf dem Handy ziehen.";
+    }
+    if (coarse.addEventListener) coarse.addEventListener("change", updateHint);
+    updateHint();
+
+    window.addEventListener("resize", resize);
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+
+    selectDiff("mittel");
+    syncMute();
+    syncScore();
+    showScreen("start");
+    resetBall(-1);
+    ball.vx = 260;
+    ball.vy = 80;
+    resize();
+    requestAnimationFrame(frame);
+
+    window.__neon = {
+      state: function () {
+        return {
+          mode: mode,
+          you: you,
+          cpu: cpu,
+          diff: diffId,
+          playerY: player.y,
+          aiY: ai.y,
+          ballX: ball.x,
+          ballY: ball.y,
+          ballVx: ball.vx,
+          ballVy: ball.vy,
+          muted: muted
+        };
+      }
+    };
+  </script>
+</body>
+</html>

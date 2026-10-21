@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Spielewelt — drei kleine Spiele: Regal-Roulette, Klecks Volley und Feenherz.">
+  <meta name="description" content="Spielewelt — vier kleine Spiele: Regal-Roulette, Klecks Volley, Feenherz und Neon-Duell.">
   <title>Spielewelt</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
   <style>
@@ -345,15 +345,80 @@
       animation: hop 1.8s ease-in-out 0.2s infinite;
     }
 
+    .neon-stage {
+      background:
+        radial-gradient(circle at 50% 120%, rgba(0, 255, 240, 0.18), transparent 42%),
+        linear-gradient(#070b16, #10182c);
+      overflow: hidden;
+    }
+
+    .n-grid {
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      bottom: 0;
+      height: 78px;
+      background:
+        linear-gradient(90deg, transparent 49.5%, rgba(120, 255, 250, 0.7) 50%, transparent 50.5%),
+        repeating-linear-gradient(90deg, rgba(90, 255, 245, 0.35) 0 1px, transparent 1px 22px),
+        repeating-linear-gradient(rgba(255, 150, 60, 0.28) 0 1px, transparent 1px 14px);
+      transform: perspective(90px) rotateX(48deg);
+      transform-origin: center bottom;
+    }
+
+    .n-pad {
+      position: absolute;
+      top: 46px;
+      width: 8px;
+      height: 52px;
+      border-radius: 4px;
+    }
+
+    .n-pad.you {
+      left: 16%;
+      background: #7dfff8;
+      box-shadow: 0 0 12px #39fff4;
+      animation: slidepad 1.8s ease-in-out infinite;
+    }
+
+    .n-pad.cpu {
+      right: 16%;
+      background: #ffb15a;
+      box-shadow: 0 0 12px #ff8a2a;
+      animation: slidepad 1.8s ease-in-out 0.25s infinite reverse;
+    }
+
+    .n-ball {
+      position: absolute;
+      left: 22%;
+      top: 62px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 10px #7dfff8, 0 0 18px #ffb15a;
+      animation: neonlob 1.8s ease-in-out infinite;
+    }
+
+    @keyframes slidepad {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(28px); }
+    }
+
+    @keyframes neonlob {
+      0% { left: 22%; top: 58px; }
+      50% { left: 48%; top: 36px; }
+      100% { left: 74%; top: 70px; }
+    }
+
     @media (min-width: 760px) {
       .games { grid-template-columns: 1fr 1fr; }
       .card { min-height: 360px; }
-      .card-feature { grid-column: 1 / -1; }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .card { transition: none; }
-      .blob, .ball, .f-fairy, .f-heart, .f-cloud.a { animation: none; }
+      .blob, .ball, .f-fairy, .f-heart, .f-cloud.a, .n-pad, .n-ball { animation: none; }
     }
   </style>
 </head>
@@ -362,7 +427,7 @@
     <header>
       <p class="hello">Spielwiese</p>
       <h1>Spielewelt</h1>
-      <p class="lede">Drei Spiele, kein Download. Eins zum Sortieren, eins zum Hüpfen, eins für die Fee. Such dir aus, womit du anfängst.</p>
+      <p class="lede">Vier Spiele, kein Download. Sortieren, hüpfen, der Fee helfen oder im Licht duellieren. Such dir aus, womit du anfängst.</p>
     </header>
 
     <div class="games">
@@ -395,7 +460,7 @@
         </div>
       </a>
 
-      <a class="card card-feature" href="feenherz.html">
+      <a class="card" href="feenherz.html">
         <div class="card-body">
           <p class="kicker">Springen</p>
           <h2>Feenherz</h2>
@@ -415,6 +480,21 @@
             <i class="f-body"></i>
           </div>
           <div class="f-heart">♥</div>
+        </div>
+      </a>
+
+      <a class="card" href="neon-duell.html">
+        <div class="card-body">
+          <p class="kicker">Licht-Duell</p>
+          <h2>Neon-Duell</h2>
+          <p>Zwei Leuchtstäbe, eine Kugel. Du links, die KI rechts. Zuerst 7 Punkte. Maus, Tasten oder Finger.</p>
+          <span class="play">Spielen</span>
+        </div>
+        <div class="stage neon-stage" aria-hidden="true">
+          <div class="n-grid"></div>
+          <div class="n-pad you"></div>
+          <div class="n-pad cpu"></div>
+          <div class="n-ball"></div>
         </div>
       </a>
     </div>
