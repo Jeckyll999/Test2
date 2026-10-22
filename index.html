@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Spielewelt — vier kleine Spiele: Regal-Roulette, Klecks Volley, Feenherz und Neon-Duell.">
+  <meta name="description" content="Spielewelt — fünf kleine Spiele: Regal-Roulette, Klecks Volley, Feenherz, Neon-Duell und Knochenhüpfer.">
   <title>Spielewelt</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
   <style>
@@ -411,14 +411,127 @@
       100% { left: 74%; top: 70px; }
     }
 
+    .bone-stage {
+      background:
+        radial-gradient(circle at 78% 28%, rgba(255, 226, 150, 0.55), transparent 22%),
+        linear-gradient(#241433 0%, #3a2a55 42%, #1c2430 72%, #141a12 100%);
+      overflow: hidden;
+    }
+
+    .b-moon {
+      position: absolute;
+      right: 14%;
+      top: 12px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #fff6d2, #e7c56a 70%);
+      box-shadow: 0 0 18px rgba(255, 220, 140, 0.85);
+    }
+
+    .b-wolf {
+      position: absolute;
+      right: 6%;
+      bottom: 18px;
+      width: 118px;
+      height: 78px;
+    }
+
+    .b-tree {
+      position: absolute;
+      left: 8%;
+      bottom: 22px;
+      width: 4px;
+      height: 46px;
+      background: #140c12;
+    }
+
+    .b-tree:before,
+    .b-tree:after {
+      content: "";
+      position: absolute;
+      bottom: 22px;
+      width: 28px;
+      height: 3px;
+      background: #140c12;
+    }
+
+    .b-tree:before { left: -22px; transform: rotate(-28deg); }
+    .b-tree:after { left: 2px; transform: rotate(24deg); }
+
+    .b-slab {
+      position: absolute;
+      height: 14px;
+      border-radius: 7px 7px 4px 4px;
+      background:
+        linear-gradient(#6f9a62, #6f9a62) top / 100% 4px no-repeat,
+        linear-gradient(#8b9084, #5c6158);
+      border: 2px solid #1c1410;
+    }
+
+    .b-slab.a { left: 18%; bottom: 20px; width: 28%; }
+    .b-slab.b { left: 52%; bottom: 48px; width: 22%; }
+
+    .b-skel {
+      position: absolute;
+      left: 24%;
+      bottom: 34px;
+      width: 26px;
+      animation: bonehop 1.05s ease-in-out infinite;
+    }
+
+    .b-skull {
+      width: 18px;
+      height: 16px;
+      margin: 0 auto;
+      background: #f4e7c8;
+      border: 2px solid #241c16;
+      border-radius: 50% 50% 42% 42%;
+      box-shadow: inset -6px 4px 0 #2a211c, inset 5px 4px 0 #2a211c;
+    }
+
+    .b-ribs {
+      width: 16px;
+      height: 14px;
+      margin: 1px auto 0;
+      border: 2px solid #241c16;
+      border-radius: 5px;
+      background:
+        linear-gradient(#241c16, #241c16) center / 2px 100% no-repeat,
+        #f4e7c8;
+    }
+
+    .b-bat {
+      position: absolute;
+      width: 14px;
+      height: 6px;
+      background: #140c12;
+      border-radius: 8px 8px 4px 4px;
+      animation: batflit 2.4s ease-in-out infinite;
+    }
+
+    .b-bat.a { left: 40%; top: 22px; }
+    .b-bat.b { left: 62%; top: 40px; animation-delay: -0.8s; }
+
+    @keyframes bonehop {
+      0%, 100% { transform: translateY(0); }
+      45% { transform: translateY(-26px); }
+    }
+
+    @keyframes batflit {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(18px); }
+    }
+
     @media (min-width: 760px) {
       .games { grid-template-columns: 1fr 1fr; }
       .card { min-height: 360px; }
+      .card-wide { grid-column: 1 / -1; }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .card { transition: none; }
-      .blob, .ball, .f-fairy, .f-heart, .f-cloud.a, .n-pad, .n-ball { animation: none; }
+      .blob, .ball, .f-fairy, .f-heart, .f-cloud.a, .n-pad, .n-ball, .b-skel, .b-bat { animation: none; }
     }
   </style>
 </head>
@@ -427,7 +540,7 @@
     <header>
       <p class="hello">Spielwiese</p>
       <h1>Spielewelt</h1>
-      <p class="lede">Vier Spiele, kein Download. Sortieren, hüpfen, der Fee helfen oder im Licht duellieren. Such dir aus, womit du anfängst.</p>
+      <p class="lede">Fünf Spiele, kein Download. Sortieren, hüpfen, der Fee helfen, im Licht duellieren oder nachts über den Friedhof springen. Such dir aus, womit du anfängst.</p>
     </header>
 
     <div class="games">
@@ -495,6 +608,28 @@
           <div class="n-pad you"></div>
           <div class="n-pad cpu"></div>
           <div class="n-ball"></div>
+        </div>
+      </a>
+
+      <a class="card card-wide" href="knochenhuepfer.html">
+        <div class="card-body">
+          <p class="kicker">Nachthüpfer</p>
+          <h2>Knochenhüpfer</h2>
+          <p>Ein Skelett hüpft von selbst über moosige Grabplatten, immer höher am Vollmond vorbei. Du lenkst nur links und rechts. Fall nicht aus dem Bild.</p>
+          <span class="play">Spielen</span>
+        </div>
+        <div class="stage bone-stage" aria-hidden="true">
+          <div class="b-moon"></div>
+          <div class="b-bat a"></div>
+          <div class="b-bat b"></div>
+          <div class="b-tree"></div>
+          <svg class="b-wolf" viewBox="0 0 120 78" aria-hidden="true">
+            <path fill="#140c18" d="M8 70c18-16 28-18 40-10 2-18 16-32 28-36 2 6 10 10 16 8-6 8-8 16-4 24 10 2 22 8 28 14H8z"/>
+            <path fill="#140c18" d="M62 28c8-2 18 2 22 10 6-8 18-8 24-2-8 4-10 12-6 16-8-6-16-10-24-8-4 6-8 4-16-16z"/>
+          </svg>
+          <div class="b-slab a"></div>
+          <div class="b-slab b"></div>
+          <div class="b-skel"><div class="b-skull"></div><div class="b-ribs"></div></div>
         </div>
       </a>
     </div>
