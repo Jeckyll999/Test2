@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Spielewelt — fünf kleine Spiele: Regal-Roulette, Klecks Volley, Feenherz, Neon-Duell und Knochenhüpfer.">
+  <meta name="description" content="Spielewelt — sechs kleine Spiele: Regal-Roulette, Klecks Volley, Feenherz, Neon-Duell, Knochenhüpfer und Vending Machine Empire.">
   <title>Spielewelt</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
   <style>
@@ -523,6 +523,75 @@
       50% { transform: translateX(18px); }
     }
 
+    .vend-stage {
+      background: linear-gradient(#c9ecf8, #fff4e4 70%);
+      overflow: hidden;
+    }
+
+    .vend {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      width: 78px;
+      height: 112px;
+      transform: translateX(-50%);
+      border: 3px solid #241c16;
+      border-radius: 14px;
+      background: linear-gradient(#e25b48, #b43328);
+      box-shadow: 4px 4px 0 #241c16;
+    }
+
+    .vend-glass {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: 10px;
+      height: 58px;
+      border-radius: 8px;
+      border: 2px solid #241c16;
+      background: #b7e4f4;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 6px;
+    }
+
+    .vend-can {
+      border-radius: 3px;
+      border: 2px solid #241c16;
+    }
+
+    .vend-can:nth-child(3n + 1) { background: #ef5b8a; }
+    .vend-can:nth-child(3n + 2) { background: #f2c14e; }
+    .vend-can:nth-child(3n) { background: #5fbf7a; }
+
+    .vend-flap {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      height: 12px;
+      border-radius: 0 0 8px 8px;
+      background: #241c16;
+    }
+
+    .vend-coin {
+      position: absolute;
+      left: calc(50% + 48px);
+      bottom: 36px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #f2c14e;
+      border: 2px solid #241c16;
+      animation: coinhop 1.4s ease-in-out infinite;
+    }
+
+    @keyframes coinhop {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-16px); }
+    }
+
     @media (min-width: 760px) {
       .games { grid-template-columns: 1fr 1fr; }
       .card { min-height: 360px; }
@@ -531,7 +600,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .card { transition: none; }
-      .blob, .ball, .f-fairy, .f-heart, .f-cloud.a, .n-pad, .n-ball, .b-skel, .b-bat { animation: none; }
+      .blob, .ball, .f-fairy, .f-heart, .f-cloud.a, .n-pad, .n-ball, .b-skel, .b-bat, .vend-coin { animation: none; }
     }
   </style>
 </head>
@@ -540,7 +609,7 @@
     <header>
       <p class="hello">Spielwiese</p>
       <h1>Spielewelt</h1>
-      <p class="lede">Fünf Spiele, kein Download. Sortieren, hüpfen, der Fee helfen, im Licht duellieren oder nachts über den Friedhof springen. Such dir aus, womit du anfängst.</p>
+      <p class="lede">Sechs Spiele, kein Download. Sortieren, hüpfen, der Fee helfen, im Licht duellieren, nachts über den Friedhof springen oder ein Automaten-Imperium aufbauen. Such dir aus, womit du anfängst.</p>
     </header>
 
     <div class="games">
@@ -611,7 +680,7 @@
         </div>
       </a>
 
-      <a class="card card-wide" href="knochenhuepfer.html">
+      <a class="card" href="knochenhuepfer.html">
         <div class="card-body">
           <p class="kicker">Nachthüpfer</p>
           <h2>Knochenhüpfer</h2>
@@ -630,6 +699,25 @@
           <div class="b-slab a"></div>
           <div class="b-slab b"></div>
           <div class="b-skel"><div class="b-skull"></div><div class="b-ribs"></div></div>
+        </div>
+      </a>
+
+      <a class="card" href="vending-machine-empire.html">
+        <div class="card-body">
+          <p class="kicker">Idle</p>
+          <h2>Vending Machine Empire</h2>
+          <p>Automaten füllen, Stück für Stück verkaufen, aufrüsten. Ohne Ware gibt es kein Geld. Geht die Kasse leer aus, hilft nur Pfand.</p>
+          <span class="play">Spielen</span>
+        </div>
+        <div class="stage vend-stage" aria-hidden="true">
+          <div class="vend">
+            <div class="vend-glass">
+              <i class="vend-can"></i><i class="vend-can"></i><i class="vend-can"></i>
+              <i class="vend-can"></i><i class="vend-can"></i><i class="vend-can"></i>
+            </div>
+            <div class="vend-flap"></div>
+          </div>
+          <div class="vend-coin"></div>
         </div>
       </a>
     </div>
