@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Sternenwache: Schiff gegen Asteroiden, die sich teilen. Wellen, Extras, drei Leben.">
+  <title>Sternenwache</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230b1020'/%3E%3Cpath d='M50 18 L62 70 L50 60 L38 70 Z' fill='%237ee0ff'/%3E%3Ccircle cx='22' cy='30' r='8' fill='%23c9b89a'/%3E%3C/svg%3E">
+  <style>
+    :root { --ink: #241c16; --muted: #6d5c4d; --card: #fffaf3; --paper: #f3f7ff; --tomato: #c2412d; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      min-height: 100dvh; display: flex; flex-direction: column; color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", "Gill Sans", sans-serif;
+      background: #0b1020; overflow: hidden; touch-action: manipulation;
+    }
+    button { font: inherit; color: inherit; touch-action: manipulation; }
+    header {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+      padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+      background: var(--paper); border-bottom: 3px solid var(--ink);
+    }
+    .back { color: var(--ink); text-decoration: none; font-weight: 800; border: 2px solid var(--ink); border-radius: 999px; padding: 6px 10px; background: #fff; }
+    .back-short { display: none; }
+    .back:focus-visible, button:focus-visible { outline: 3px solid var(--tomato); outline-offset: 2px; }
+    .hello { margin: 0; color: var(--tomato); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.68rem; }
+    h1 { margin: 0; font-family: Georgia, Palatino, serif; font-size: 1.15rem; letter-spacing: -0.03em; }
+    .hud { margin-left: auto; display: flex; gap: 8px; font-weight: 800; }
+    .pill { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 4px 10px; }
+    .tools { display: flex; gap: 8px; }
+    .ghost { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 6px 10px; font-weight: 800; cursor: pointer; }
+    .ghost[aria-pressed="true"] { background: var(--ink); color: #fff; }
+    .ghost:disabled { opacity: 0.45; }
+    .stage { flex: 1; position: relative; min-height: 180px; touch-action: none; }
+    canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+    .overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; background: rgba(5, 8, 20, 0.55); z-index: 3; }
+    .overlay[hidden], .screen[hidden] { display: none; }
+    .dialog { width: min(520px, 100%); background: var(--card); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 7px 7px 0 #1b2438; padding: 16px; }
+    .dialog h2 { margin: 0 0 8px; font-family: Georgia, Palatino, serif; font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1; }
+    .dialog p { margin: 0 0 8px; line-height: 1.4; }
+    .go { background: var(--ink); color: #fff; border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; cursor: pointer; }
+    .help { margin: 8px 0 0; padding-left: 1.1rem; color: var(--muted); }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    @media (max-width: 720px) {
+      .back-long { display: none; } .back-short { display: inline; }
+      h1 { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back" href="index.html" aria-label="Zurück zur Übersicht"><span class="back-long">Zurück zur Übersicht</span><span class="back-short">← Übersicht</span></a>
+    <div>
+      <p class="hello">Spielewelt</p>
+      <h1>Sternenwache</h1>
+    </div>
+    <div class="hud">
+      <span class="pill">Welle <strong id="wave">1</strong></span>
+      <span class="pill">Punkte <strong id="score">0</strong></span>
+      <span class="pill">Leben <strong id="lives">3</strong></span>
+    </div>
+    <div class="tools">
+      <button type="button" class="ghost" id="pause" disabled>Pause</button>
+      <button type="button" class="ghost" id="mute" aria-pressed="false">Ton an</button>
+      <button type="button" class="ghost" id="restart">Neustart</button>
+    </div>
+  </header>
+  <div class="stage" id="stage">
+    <canvas id="view"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="dialog screen" data-screen="start">
+        <h2>Posten am Rand</h2>
+        <p>Asteroiden kommen in Wellen und zerbrechen, wenn du sie triffst. Sammle Extras. Drei Leben.</p>
+        <ul class="help">
+          <li>Drehen: Links/Rechts oder A/D. Schub: Hoch oder W. Schuss: Leertaste.</li>
+          <li>Auf dem Handy: Steuerknüppel links, Feuerknopf rechts.</li>
+          <li>Pause mit P. Rekord bleibt auf diesem Gerät.</li>
+        </ul>
+        <p><button type="button" class="go" id="play">Start</button></p>
+      </div>
+      <div class="dialog screen" data-screen="pause" hidden>
+        <h2>Pause</h2>
+        <p>Die Steine treiben nicht weiter.</p>
+        <p><button type="button" class="go" id="resume">Weiter</button></p>
+      </div>
+      <div class="dialog screen" data-screen="over" hidden>
+        <h2>Treffer</h2>
+        <p id="over-text"></p>
+        <p><button type="button" class="go" id="again">Nochmal</button></p>
+      </div>
+    </div>
+  </div>
+  <p class="sr" id="live" aria-live="polite"></p>
+  <script>
+    (function () {
+      const SAVE = "sternenwache";
+      const MUTE = "sternenwache-mute";
+      const canvas = document.getElementById("view");
+      const ctx = canvas.getContext("2d");
+      const stage = document.getElementById("stage");
+      const overlay = document.getElementById("overlay");
+      let cssW = 900, cssH = 600, dpr = 1;
+      let mode = "menu";
+      let muted = false;
+      let best = 0;
+      let audioCtx = null;
+      let last = 0;
+      let score = 0, lives = 3, wave = 1, iframe = 0;
+      let ship, rocks, shots, drops, stars;
+      let power = { shield: 0, spread: 0, rapid: 0 };
+      let cooldown = 0;
+      let keys = {};
+      let joy = null;
+      let firing = false;
+      const pointers = {};
+
+      function say(t) { document.getElementById("live").textContent = t; }
+      function loadStore() {
+        try { muted = localStorage.getItem(MUTE) === "1"; best = Number(localStorage.getItem(SAVE) || 0) || 0; }
+        catch (err) { best = 0; }
+      }
+      function saveBest() {
+        if (score > best) best = score;
+        try { localStorage.setItem(SAVE, String(best)); } catch (err) { /* ignore */ }
+      }
+      function syncMute() {
+        const b = document.getElementById("mute");
+        b.textContent = muted ? "Ton aus" : "Ton an";
+        b.setAttribute("aria-pressed", muted ? "true" : "false");
+      }
+      function unlock() {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        if (!audioCtx) audioCtx = new AC();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      }
+      function tone(freq, dur, type, gain) {
+        if (muted || !audioCtx) return;
+        const t = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type || "square";
+        o.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(gain || 0.04, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t); o.stop(t + dur + 0.02);
+      }
+      function show(which) {
+        overlay.hidden = which === "none";
+        document.querySelectorAll(".screen").forEach(function (el) { el.hidden = el.dataset.screen !== which; });
+        document.getElementById("pause").disabled = which !== "none";
+      }
+      function wrap(v, m) { v %= m; return v < 0 ? v + m : v; }
+      function makeRock(x, y, r, vx, vy) {
+        const verts = [];
+        const n = 7 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < n; i++) verts.push(0.75 + Math.random() * 0.4);
+        rocks.push({ x: x, y: y, r: r, vx: vx, vy: vy, ang: Math.random() * 6, spin: (Math.random() - 0.5) * 1.4, verts: verts });
+      }
+      function spawnWave(n) {
+        for (let i = 0; i < n; i++) {
+          const edge = Math.floor(Math.random() * 4);
+          let x = Math.random() * cssW, y = Math.random() * cssH;
+          if (edge === 0) x = 10; else if (edge === 1) x = cssW - 10; else if (edge === 2) y = 10; else y = cssH - 10;
+          const ang = Math.random() * Math.PI * 2;
+          const sp = 30 + Math.random() * 40 + wave * 4;
+          makeRock(x, y, 42, Math.cos(ang) * sp, Math.sin(ang) * sp);
+        }
+        say("Welle " + wave + ".");
+      }
+      function fresh() {
+        score = 0; lives = 3; wave = 1; iframe = 0; cooldown = 0; firing = false; joy = null;
+        power = { shield: 0, spread: 0, rapid: 0 };
+        ship = { x: cssW / 2, y: cssH / 2, ang: -Math.PI / 2, vx: 0, vy: 0 };
+        rocks = []; shots = []; drops = [];
+        stars = [];
+        for (let i = 0; i < 40; i++) stars.push({ x: Math.random() * cssW, y: Math.random() * cssH, s: Math.random() * 1.6 + 0.4 });
+        document.getElementById("score").textContent = "0";
+        document.getElementById("lives").textContent = "3";
+        document.getElementById("wave").textContent = "1";
+        spawnWave(4);
+      }
+      function begin() { fresh(); mode = "play"; show("none"); tone(660, 0.06, "square", 0.04); }
+      function gameover() {
+        mode = "over";
+        saveBest();
+        document.getElementById("over-text").textContent = score + " Punkte, Welle " + wave + ". Rekord " + best + ".";
+        show("over");
+        say("Schiff verloren. " + score + " Punkte.");
+        tone(90, 0.2, "sawtooth", 0.05);
+      }
+      function fire() {
+        if (mode !== "play" || cooldown > 0) return;
+        const delay = power.rapid > 0 ? 0.12 : 0.24;
+        cooldown = delay;
+        const dirs = power.spread > 0 ? [-0.28, 0, 0.28] : [0];
+        dirs.forEach(function (off) {
+          const a = ship.ang + off;
+          shots.push({ x: ship.x + Math.cos(a) * 18, y: ship.y + Math.sin(a) * 18, vx: Math.cos(a) * 460 + ship.vx, vy: Math.sin(a) * 460 + ship.vy, life: 1.1 });
+        });
+        tone(power.spread > 0 ? 740 : 880, 0.04, "square", 0.03);
+      }
+      function hitShip() {
+        if (iframe > 0 || mode !== "play") return;
+        if (power.shield > 0) { power.shield = 0; iframe = 0.6; tone(300, 0.1, "square", 0.04); say("Schild weg."); return; }
+        lives -= 1;
+        iframe = 1.4;
+        ship.x = cssW / 2; ship.y = cssH / 2; ship.vx = 0; ship.vy = 0;
+        document.getElementById("lives").textContent = String(lives);
+        tone(120, 0.16, "sawtooth", 0.05);
+        say(lives > 0 ? "Treffer. Noch " + lives + "." : "Letztes Leben weg.");
+        if (lives <= 0) gameover();
+      }
+      function splitRock(rock, i) {
+        const gain = rock.r > 30 ? 20 : rock.r > 18 ? 40 : 60;
+        score += gain;
+        document.getElementById("score").textContent = String(score);
+        if (score > best) saveBest();
+        rocks.splice(i, 1);
+        tone(200 + gain, 0.05, "square", 0.04);
+        if (rock.r > 18) {
+          const nr = rock.r > 30 ? 24 : 13;
+          for (let k = 0; k < 2; k++) {
+            const a = Math.random() * Math.PI * 2;
+            makeRock(rock.x, rock.y, nr, rock.vx + Math.cos(a) * 70, rock.vy + Math.sin(a) * 70);
+          }
+        }
+        if (Math.random() < 0.12) {
+          const kinds = ["schild", "fächer", "schnell"];
+          drops.push({ x: rock.x, y: rock.y, kind: kinds[Math.floor(Math.random() * 3)], life: 9 });
+        }
+      }
+      function togglePause() {
+        if (mode === "play") { mode = "pause"; show("pause"); say("Pause."); }
+        else if (mode === "pause") { mode = "play"; show("none"); }
+      }
+      function resize() {
+        const rect = stage.getBoundingClientRect();
+        cssW = Math.max(2, rect.width);
+        cssH = Math.max(2, rect.height);
+        dpr = Math.min(2, window.devicePixelRatio || 1);
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+        if (ship && mode === "menu") { ship.x = cssW / 2; ship.y = cssH / 2; }
+      }
+      function step(dt) {
+        if (mode !== "play") return;
+        if (iframe > 0) iframe -= dt;
+        if (cooldown > 0) cooldown -= dt;
+        power.spread = Math.max(0, power.spread - dt);
+        power.rapid = Math.max(0, power.rapid - dt);
+        let turn = 0;
+        if (keys.ArrowLeft || keys.KeyA) turn -= 1;
+        if (keys.ArrowRight || keys.KeyD) turn += 1;
+        if (joy) turn += Math.max(-1, Math.min(1, joy.x)) * 1.2;
+        ship.ang += turn * 3.2 * dt;
+        const thrust = (keys.ArrowUp || keys.KeyW || (joy && joy.y < -0.25)) ? 1 : 0;
+        if (thrust) {
+          ship.vx += Math.cos(ship.ang) * 260 * dt;
+          ship.vy += Math.sin(ship.ang) * 260 * dt;
+        }
+        ship.vx *= 1 - 0.55 * dt;
+        ship.vy *= 1 - 0.55 * dt;
+        ship.x = wrap(ship.x + ship.vx * dt, cssW);
+        ship.y = wrap(ship.y + ship.vy * dt, cssH);
+        if (firing || keys.Space) fire();
+        shots.forEach(function (s) { s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; });
+        shots = shots.filter(function (s) { return s.life > 0 && s.x > -20 && s.y > -20 && s.x < cssW + 20 && s.y < cssH + 20; });
+        rocks.forEach(function (r) {
+          r.x = wrap(r.x + r.vx * dt, cssW);
+          r.y = wrap(r.y + r.vy * dt, cssH);
+          r.ang += r.spin * dt;
+        });
+        for (let i = rocks.length - 1; i >= 0; i--) {
+          const r = rocks[i];
+          for (let j = shots.length - 1; j >= 0; j--) {
+            const s = shots[j];
+            if (Math.hypot(s.x - r.x, s.y - r.y) < r.r) { shots.splice(j, 1); splitRock(r, i); break; }
+          }
+        }
+        if (iframe <= 0) {
+          for (let i = 0; i < rocks.length; i++) {
+            if (Math.hypot(rocks[i].x - ship.x, rocks[i].y - ship.y) < rocks[i].r + 12) { hitShip(); break; }
+          }
+        }
+        for (let i = drops.length - 1; i >= 0; i--) {
+          const d = drops[i];
+          d.life -= dt;
+          if (d.life <= 0) { drops.splice(i, 1); continue; }
+          if (Math.hypot(d.x - ship.x, d.y - ship.y) < 22) {
+            if (d.kind === "schild") power.shield = 1;
+            if (d.kind === "fächer") power.spread = 8;
+            if (d.kind === "schnell") power.rapid = 8;
+            drops.splice(i, 1);
+            tone(990, 0.08, "square", 0.04);
+            say(d.kind === "schild" ? "Schild." : d.kind === "fächer" ? "Fächer." : "Schnellfeuer.");
+          }
+        }
+        if (rocks.length === 0) {
+          wave += 1;
+          document.getElementById("wave").textContent = String(wave);
+          spawnWave(3 + wave);
+          tone(523, 0.08, "square", 0.04);
+        }
+      }
+      function drawShip(g) {
+        g.save();
+        g.translate(ship.x, ship.y);
+        g.rotate(ship.ang);
+        g.fillStyle = iframe > 0 && Math.floor(performance.now() / 80) % 2 === 0 ? "rgba(126,224,255,0.35)" : "#7ee0ff";
+        g.strokeStyle = "#e8fbff";
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(16, 0); g.lineTo(-12, 9); g.lineTo(-7, 0); g.lineTo(-12, -9); g.closePath();
+        g.fill(); g.stroke();
+        if (power.shield > 0) { g.strokeStyle = "#9dffce"; g.beginPath(); g.arc(0, 0, 22, 0, Math.PI * 2); g.stroke(); }
+        g.restore();
+      }
+      function draw() {
+        const g = ctx;
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        g.fillStyle = "#0b1020";
+        g.fillRect(0, 0, cssW, cssH);
+        g.fillStyle = "#d5e6ff";
+        stars.forEach(function (s) { g.fillRect(s.x, s.y, s.s, s.s); });
+        rocks.forEach(function (r) {
+          g.save();
+          g.translate(r.x, r.y);
+          g.rotate(r.ang);
+          g.beginPath();
+          r.verts.forEach(function (v, i) {
+            const a = (i / r.verts.length) * Math.PI * 2;
+            const px = Math.cos(a) * r.r * v, py = Math.sin(a) * r.r * v;
+            if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+          });
+          g.closePath();
+          g.fillStyle = "#8d7d68";
+          g.strokeStyle = "#e6d7c3";
+          g.lineWidth = 2;
+          g.fill(); g.stroke();
+          g.restore();
+        });
+        g.fillStyle = "#fff4b0";
+        shots.forEach(function (s) { g.beginPath(); g.arc(s.x, s.y, 3, 0, Math.PI * 2); g.fill(); });
+        drops.forEach(function (d) {
+          g.fillStyle = d.kind === "schild" ? "#9dffce" : d.kind === "fächer" ? "#ffd36e" : "#ff8fab";
+          g.beginPath(); g.arc(d.x, d.y, 8, 0, Math.PI * 2); g.fill();
+        });
+        if (ship) drawShip(g);
+        const touchUi = cssW < 900;
+        if (touchUi) {
+          g.strokeStyle = "rgba(255,255,255,0.35)";
+          g.lineWidth = 2;
+          g.beginPath(); g.arc(86, cssH - 86, 48, 0, Math.PI * 2); g.stroke();
+          if (joy) { g.beginPath(); g.arc(86 + joy.x * 28, cssH - 86 + joy.y * 28, 16, 0, Math.PI * 2); g.stroke(); }
+          g.beginPath(); g.arc(cssW - 78, cssH - 86, 36, 0, Math.PI * 2); g.stroke();
+          g.fillStyle = "rgba(255,255,255,0.75)";
+          g.font = "700 14px Segoe UI, sans-serif";
+          g.fillText("Feuer", cssW - 98, cssH - 80);
+        }
+        const bits = [];
+        if (power.shield > 0) bits.push("Schild");
+        if (power.spread > 0) bits.push("Fächer");
+        if (power.rapid > 0) bits.push("Schnell");
+        if (bits.length) {
+          g.fillStyle = "#d5ffe8";
+          g.font = "700 14px Segoe UI, sans-serif";
+          g.fillText(bits.join(" · "), 12, 22);
+        }
+      }
+      function localPoint(e) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: (e.clientX - rect.left) * (cssW / rect.width), y: (e.clientY - rect.top) * (cssH / rect.height) };
+      }
+      function pointerDown(e) {
+        unlock();
+        if (mode === "menu") begin();
+        const p = localPoint(e);
+        pointers[e.pointerId] = p;
+        if (cssW < 900) {
+          if (p.x < cssW * 0.45) joy = { x: (p.x - 86) / 48, y: (p.y - (cssH - 86)) / 48, id: e.pointerId };
+          else { firing = true; fire(); }
+        } else {
+          const ang = Math.atan2(p.y - ship.y, p.x - ship.x);
+          ship.ang = ang;
+          firing = true;
+          fire();
+        }
+      }
+      function pointerMove(e) {
+        if (!pointers[e.pointerId]) return;
+        const p = localPoint(e);
+        pointers[e.pointerId] = p;
+        if (joy && joy.id === e.pointerId) {
+          joy.x = Math.max(-1, Math.min(1, (p.x - 86) / 48));
+          joy.y = Math.max(-1, Math.min(1, (p.y - (cssH - 86)) / 48));
+        }
+      }
+      function pointerUp(e) {
+        delete pointers[e.pointerId];
+        if (joy && joy.id === e.pointerId) joy = null;
+        if (Object.keys(pointers).length === 0) firing = false;
+      }
+      function frame(now) {
+        let dt = (now - last) / 1000;
+        last = now;
+        if (!isFinite(dt) || dt < 0) dt = 0;
+        if (dt > 0.05) dt = 0.05;
+        step(dt);
+        draw();
+        requestAnimationFrame(frame);
+      }
+      canvas.addEventListener("pointerdown", pointerDown);
+      canvas.addEventListener("pointermove", pointerMove);
+      canvas.addEventListener("pointerup", pointerUp);
+      canvas.addEventListener("pointercancel", pointerUp);
+      window.addEventListener("keydown", function (e) {
+        if (e.code === "KeyP" && !e.repeat) { togglePause(); e.preventDefault(); return; }
+        keys[e.code] = true;
+        if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "KeyA", "KeyD", "KeyW"].indexOf(e.code) >= 0) e.preventDefault();
+      });
+      window.addEventListener("keyup", function (e) { keys[e.code] = false; });
+      document.getElementById("play").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("again").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("restart").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("pause").addEventListener("click", togglePause);
+      document.getElementById("resume").addEventListener("click", togglePause);
+      document.getElementById("mute").addEventListener("click", function () {
+        muted = !muted; syncMute();
+        try { localStorage.setItem(MUTE, muted ? "1" : "0"); } catch (err) { /* ignore */ }
+      });
+      window.addEventListener("resize", resize);
+      if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+      loadStore();
+      syncMute();
+      resize();
+      fresh();
+      show("start");
+      last = performance.now();
+      requestAnimationFrame(frame);
+      window.__stern = {
+        start: begin,
+        fire: fire,
+        turn: function (v) { if (ship) ship.ang += v; },
+        spawn: function (x, y, r) { makeRock(x, y, r || 20, 0, 0); },
+        clearRocks: function () { rocks = []; },
+        thrust: function (on) { keys.ArrowUp = !!on; },
+        state: function () {
+          return {
+            mode: mode, score: score, best: best, lives: lives, wave: wave,
+            rocks: rocks.length, shots: shots.length, shield: power.shield, muted: muted,
+            x: ship ? ship.x : 0, y: ship ? ship.y : 0
+          };
+        }
+      };
+    })();
+  </script>
+</body>
+</html>

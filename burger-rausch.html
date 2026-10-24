@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Burger-Rausch: Bestellungen stapeln, bevor die Zeit abläuft.">
+  <title>Burger-Rausch</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23f4e2c8'/%3E%3Cellipse cx='50' cy='38' rx='28' ry='12' fill='%23e25b48'/%3E%3Crect x='22' y='46' width='56' height='8' fill='%235fbf7a'/%3E%3Crect x='22' y='54' width='56' height='10' fill='%23c2412d'/%3E%3Cellipse cx='50' cy='70' rx='28' ry='10' fill='%23f2c14e'/%3E%3C/svg%3E">
+  <style>
+    :root { --ink: #241c16; --muted: #6d5c4d; --card: #fffaf3; --paper: #fff6ea; --tomato: #c2412d; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      min-height: 100dvh; display: flex; flex-direction: column; color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", "Gill Sans", sans-serif;
+      background: #f6d7a8; overflow: hidden; touch-action: manipulation;
+    }
+    button { font: inherit; color: inherit; touch-action: manipulation; }
+    header {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+      padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+      background: var(--paper); border-bottom: 3px solid var(--ink);
+    }
+    .back { color: var(--ink); text-decoration: none; font-weight: 800; border: 2px solid var(--ink); border-radius: 999px; padding: 6px 10px; background: #fff; }
+    .back-short { display: none; }
+    .back:focus-visible, button:focus-visible { outline: 3px solid var(--tomato); outline-offset: 2px; }
+    .hello { margin: 0; color: var(--tomato); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.68rem; }
+    h1 { margin: 0; font-family: Georgia, Palatino, serif; font-size: 1.15rem; letter-spacing: -0.03em; }
+    .hud { margin-left: auto; display: flex; gap: 8px; font-weight: 800; }
+    .pill { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 4px 10px; }
+    .tools { display: flex; gap: 8px; }
+    .ghost { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 6px 10px; font-weight: 800; cursor: pointer; }
+    .ghost[aria-pressed="true"] { background: var(--ink); color: #fff; }
+    .ghost:disabled { opacity: 0.45; }
+    .stage { flex: 1; position: relative; min-height: 0; display: flex; }
+    .playfield {
+      flex: 1; display: grid; grid-template-columns: minmax(140px, 34%) 1fr; gap: 10px;
+      padding: 10px; min-height: 0;
+    }
+    .panel {
+      background: var(--card); border: 3px solid var(--ink); border-radius: 18px; padding: 10px;
+      overflow: auto; min-height: 0;
+    }
+    .panel h2 { margin: 0 0 8px; font-family: Georgia, Palatino, serif; font-size: 1.2rem; }
+    .order { display: flex; flex-direction: column-reverse; gap: 4px; align-items: stretch; }
+    .stack { min-height: 180px; display: flex; flex-direction: column-reverse; gap: 3px; justify-content: flex-start; align-items: center; }
+    .layer {
+      height: 22px; border-radius: 10px; border: 2px solid var(--ink); width: 78%;
+    }
+    .layer.boden { background: #e2b15a; border-radius: 4px 4px 16px 16px; height: 26px; }
+    .layer.patty { background: #7a3b24; width: 70%; }
+    .layer.kaese { background: #f2c14e; width: 74%; height: 12px; }
+    .layer.salat { background: #5fbf7a; width: 80%; border-radius: 40% 50% 40% 50%; }
+    .layer.tomate { background: #e25b48; width: 68%; height: 14px; }
+    .layer.zwiebel { background: #f4e7c8; width: 66%; height: 12px; }
+    .layer.deckel { background: #c2412d; border-radius: 18px 18px 6px 6px; height: 28px; }
+    .ings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+    .ings button, .serve, .undo {
+      min-height: 48px; border-radius: 12px; border: 2px solid var(--ink); background: #fff; font-weight: 800; cursor: pointer;
+    }
+    .row { display: flex; gap: 8px; margin-top: 8px; }
+    .serve { background: var(--ink); color: #fff; flex: 1; }
+    .bar { height: 12px; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: #fff; margin-top: 8px; }
+    .bar span { display: block; height: 100%; width: 100%; background: #5fbf7a; }
+    .overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; background: rgba(36, 28, 22, 0.4); z-index: 3; }
+    .overlay[hidden], .screen[hidden] { display: none; }
+    .dialog { width: min(480px, 100%); background: var(--card); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 7px 7px 0 #5a4632; padding: 16px; }
+    .dialog h2 { margin: 0 0 8px; font-family: Georgia, Palatino, serif; font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1; }
+    .dialog p { margin: 0 0 8px; line-height: 1.4; }
+    .go { background: var(--ink); color: #fff; border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; cursor: pointer; }
+    .help { margin: 8px 0 0; padding-left: 1.1rem; color: var(--muted); }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    @media (max-width: 720px) {
+      .back-long { display: none; } .back-short { display: inline; }
+      .playfield { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .ings { grid-template-columns: repeat(4, 1fr); }
+      h1 { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back" href="index.html" aria-label="Zurück zur Übersicht"><span class="back-long">Zurück zur Übersicht</span><span class="back-short">← Übersicht</span></a>
+    <div>
+      <p class="hello">Spielewelt</p>
+      <h1>Burger-Rausch</h1>
+    </div>
+    <div class="hud">
+      <span class="pill">Zeit <strong id="time">45</strong></span>
+      <span class="pill">Kasse <strong id="money">0 €</strong></span>
+      <span class="pill">Best <strong id="best">0 €</strong></span>
+    </div>
+    <div class="tools">
+      <button type="button" class="ghost" id="pause" disabled>Pause</button>
+      <button type="button" class="ghost" id="mute" aria-pressed="false">Ton an</button>
+      <button type="button" class="ghost" id="restart">Neustart</button>
+    </div>
+  </header>
+  <div class="stage" id="stage">
+    <div class="playfield">
+      <section class="panel">
+        <h2>Bestellung</h2>
+        <div class="order" id="order"></div>
+        <div class="bar" aria-hidden="true"><span id="bar"></span></div>
+      </section>
+      <section class="panel">
+        <h2>Dein Burger</h2>
+        <div class="stack" id="stack"></div>
+        <div class="ings" id="ings"></div>
+        <div class="row">
+          <button type="button" class="undo" id="undo">Zurück</button>
+          <button type="button" class="serve" id="serve">Servieren</button>
+        </div>
+      </section>
+    </div>
+    <div class="overlay" id="overlay">
+      <div class="dialog screen" data-screen="start">
+        <h2>Schicht im Schacht</h2>
+        <p>Die Gäste zeigen die Reihenfolge. Tippe die Zutaten von unten nach oben und serviere. Richtig bringt Geld und Zeit, falsch kostet beides. Es wird schneller.</p>
+        <ul class="help">
+          <li>Tasten 1 bis 7 für die Zutaten, Enter serviert, Rücktaste macht den letzten Schritt rückgängig.</li>
+          <li>Pause mit P. Die beste Kasse bleibt auf diesem Gerät.</li>
+        </ul>
+        <p><button type="button" class="go" id="play">Schicht starten</button></p>
+      </div>
+      <div class="dialog screen" data-screen="pause" hidden>
+        <h2>Pause</h2>
+        <p>Die Fritteuse wartet.</p>
+        <p><button type="button" class="go" id="resume">Weiter</button></p>
+      </div>
+      <div class="dialog screen" data-screen="over" hidden>
+        <h2>Feierabend</h2>
+        <p id="over-text"></p>
+        <p><button type="button" class="go" id="again">Nochmal</button></p>
+      </div>
+    </div>
+  </div>
+  <p class="sr" id="live" aria-live="polite"></p>
+  <script>
+    (function () {
+      const SAVE = "burger-rausch";
+      const MUTE = "burger-rausch-mute";
+      const ING = [
+        { id: "boden", name: "Boden", cls: "boden" },
+        { id: "patty", name: "Patty", cls: "patty" },
+        { id: "kaese", name: "Käse", cls: "kaese" },
+        { id: "salat", name: "Salat", cls: "salat" },
+        { id: "tomate", name: "Tomate", cls: "tomate" },
+        { id: "zwiebel", name: "Zwiebel", cls: "zwiebel" },
+        { id: "deckel", name: "Deckel", cls: "deckel" }
+      ];
+      const MID = ["patty", "kaese", "salat", "tomate", "zwiebel"];
+      let mode = "menu";
+      let muted = false;
+      let best = 0;
+      let audioCtx = null;
+      let last = 0;
+      let money = 0;
+      let time = 45;
+      let timeMax = 45;
+      let served = 0;
+      let order = [];
+      let stack = [];
+
+      function say(t) { document.getElementById("live").textContent = t; }
+      function euro(n) { return n + " €"; }
+      function loadStore() {
+        try { muted = localStorage.getItem(MUTE) === "1"; best = Number(localStorage.getItem(SAVE) || 0) || 0; }
+        catch (err) { best = 0; }
+      }
+      function saveBest() {
+        if (money > best) best = money;
+        try { localStorage.setItem(SAVE, String(best)); } catch (err) { /* ignore */ }
+        document.getElementById("best").textContent = euro(best);
+      }
+      function syncMute() {
+        const b = document.getElementById("mute");
+        b.textContent = muted ? "Ton aus" : "Ton an";
+        b.setAttribute("aria-pressed", muted ? "true" : "false");
+      }
+      function unlock() {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        if (!audioCtx) audioCtx = new AC();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      }
+      function tone(freq, dur, type, gain) {
+        if (muted || !audioCtx) return;
+        const t = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type || "square";
+        o.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(gain || 0.05, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t); o.stop(t + dur + 0.02);
+      }
+      function show(which) {
+        document.getElementById("overlay").hidden = which === "none";
+        document.querySelectorAll(".screen").forEach(function (el) { el.hidden = el.dataset.screen !== which; });
+        document.getElementById("pause").disabled = which !== "none";
+      }
+      function info(id) { return ING.filter(function (x) { return x.id === id; })[0]; }
+      function paint(el, ids) {
+        el.innerHTML = "";
+        ids.forEach(function (id) {
+          const spec = info(id);
+          const d = document.createElement("div");
+          d.className = "layer " + spec.cls;
+          d.title = spec.name;
+          el.appendChild(d);
+        });
+      }
+      function render() {
+        paint(document.getElementById("order"), order);
+        paint(document.getElementById("stack"), stack);
+        document.getElementById("money").textContent = euro(money);
+        document.getElementById("time").textContent = String(Math.max(0, Math.ceil(time)));
+        document.getElementById("best").textContent = euro(best);
+        document.getElementById("bar").style.width = Math.max(0, Math.min(100, time / timeMax * 100)) + "%";
+      }
+      function newOrder() {
+        const n = 1 + Math.floor(Math.random() * Math.min(4, 1 + served));
+        const bag = MID.slice();
+        const mid = [];
+        for (let i = 0; i < n && bag.length; i++) {
+          const k = Math.floor(Math.random() * bag.length);
+          mid.push(bag.splice(k, 1)[0]);
+        }
+        order = ["boden"].concat(mid).concat(["deckel"]);
+        stack = [];
+        render();
+      }
+      function fresh() {
+        money = 0; time = 48; timeMax = 48; served = 0; stack = [];
+        newOrder();
+      }
+      function begin() {
+        fresh();
+        mode = "play";
+        show("none");
+        say("Neue Bestellung.");
+        tone(523, 0.06, "square", 0.04);
+      }
+      function gameover() {
+        mode = "over";
+        saveBest();
+        document.getElementById("over-text").textContent = "Kasse " + euro(money) + ". Rekord " + euro(best) + ".";
+        show("over");
+        say("Feierabend. " + euro(money));
+        tone(110, 0.2, "sawtooth", 0.05);
+      }
+      function add(id) {
+        if (mode !== "play") return;
+        stack.push(id);
+        render();
+        tone(300 + stack.length * 40, 0.04, "square", 0.03);
+      }
+      function undo() {
+        if (mode !== "play" || !stack.length) return;
+        stack.pop();
+        render();
+      }
+      function same(a, b) {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+        return true;
+      }
+      function serve() {
+        if (mode !== "play") return;
+        if (same(stack, order)) {
+          const pay = 4 + (order.length - 2) * 3;
+          const bonus = Math.max(2, 7 - served * 0.35);
+          money += pay;
+          time = Math.min(timeMax, time + bonus);
+          served += 1;
+          saveBest();
+          say("Passt. Plus " + pay + " Euro.");
+          tone(660, 0.08, "square", 0.05);
+          newOrder();
+        } else {
+          money = Math.max(0, money - 6);
+          time -= 4;
+          say("Falsche Reihenfolge.");
+          tone(140, 0.12, "sawtooth", 0.05);
+          stack = [];
+          render();
+          if (time <= 0) gameover();
+        }
+      }
+      function togglePause() {
+        if (mode === "play") { mode = "pause"; show("pause"); say("Pause."); }
+        else if (mode === "pause") { mode = "play"; show("none"); }
+      }
+      function step(dt) {
+        if (mode !== "play") return;
+        const rate = 1 + served * 0.12;
+        time -= dt * rate;
+        if (Math.floor(time) !== Number(document.getElementById("time").textContent)) render();
+        else document.getElementById("bar").style.width = Math.max(0, time / timeMax * 100) + "%";
+        if (time <= 0) { time = 0; render(); gameover(); }
+      }
+      function frame(now) {
+        let dt = (now - last) / 1000;
+        last = now;
+        if (!isFinite(dt) || dt < 0) dt = 0;
+        if (dt > 0.05) dt = 0.05;
+        step(dt);
+        requestAnimationFrame(frame);
+      }
+      const box = document.getElementById("ings");
+      ING.forEach(function (spec, i) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = (i + 1) + " " + spec.name;
+        b.addEventListener("click", function () { unlock(); add(spec.id); });
+        box.appendChild(b);
+      });
+      document.getElementById("undo").addEventListener("click", function () { unlock(); undo(); });
+      document.getElementById("serve").addEventListener("click", function () { unlock(); serve(); });
+      document.getElementById("play").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("again").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("restart").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("pause").addEventListener("click", togglePause);
+      document.getElementById("resume").addEventListener("click", togglePause);
+      document.getElementById("mute").addEventListener("click", function () {
+        muted = !muted; syncMute();
+        try { localStorage.setItem(MUTE, muted ? "1" : "0"); } catch (err) { /* ignore */ }
+      });
+      window.addEventListener("keydown", function (e) {
+        if (e.code === "KeyP" && !e.repeat) { togglePause(); e.preventDefault(); return; }
+        if (mode !== "play") return;
+        const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5, Digit7: 6 }[e.code];
+        if (n != null && !e.repeat) { add(ING[n].id); e.preventDefault(); }
+        if (e.code === "Enter" && !e.repeat) { serve(); e.preventDefault(); }
+        if (e.code === "Backspace") { undo(); e.preventDefault(); }
+      });
+      loadStore();
+      syncMute();
+      fresh();
+      show("start");
+      mode = "menu";
+      last = performance.now();
+      requestAnimationFrame(frame);
+      window.__burger = {
+        start: begin,
+        add: add,
+        undo: undo,
+        serve: serve,
+        state: function () {
+          return {
+            mode: mode, money: money, best: best, time: time, served: served,
+            order: order.slice(), stack: stack.slice(), muted: muted
+          };
+        }
+      };
+    })();
+  </script>
+</body>
+</html>

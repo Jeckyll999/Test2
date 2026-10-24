@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Turmbau: Blöcke im richtigen Moment fallen lassen. Überstand wird abgeschnitten.">
+  <title>Turmbau</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23f4e2c8'/%3E%3Crect x='22' y='62' width='56' height='16' rx='3' fill='%23e25b48'/%3E%3Crect x='30' y='44' width='40' height='16' rx='3' fill='%23f2c14e'/%3E%3Crect x='36' y='26' width='28' height='16' rx='3' fill='%235fbf7a'/%3E%3C/svg%3E">
+  <style>
+    :root { --ink: #241c16; --muted: #6d5c4d; --card: #fffaf3; --paper: #fff6ea; --tomato: #c2412d; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      min-height: 100dvh; display: flex; flex-direction: column; color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", "Gill Sans", sans-serif;
+      background: #f4e2c8; overflow: hidden; touch-action: manipulation;
+    }
+    button { font: inherit; color: inherit; touch-action: manipulation; }
+    header {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+      padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+      background: var(--paper); border-bottom: 3px solid var(--ink);
+    }
+    .back { color: var(--ink); text-decoration: none; font-weight: 800; border: 2px solid var(--ink); border-radius: 999px; padding: 6px 10px; background: #fff; }
+    .back-short { display: none; }
+    .back:focus-visible, button:focus-visible { outline: 3px solid var(--tomato); outline-offset: 2px; }
+    .hello { margin: 0; color: var(--tomato); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.68rem; }
+    h1 { margin: 0; font-family: Georgia, Palatino, serif; font-size: 1.15rem; letter-spacing: -0.03em; }
+    .hud { margin-left: auto; display: flex; gap: 8px; font-weight: 800; }
+    .pill { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 4px 10px; }
+    .tools { display: flex; gap: 8px; }
+    .ghost { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 6px 10px; font-weight: 800; cursor: pointer; }
+    .ghost[aria-pressed="true"] { background: var(--ink); color: #fff; }
+    .ghost:disabled { opacity: 0.45; }
+    .stage { flex: 1; position: relative; min-height: 180px; touch-action: none; background: #efe2cf; }
+    canvas { width: 100%; height: 100%; display: block; cursor: pointer; }
+    .overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; background: rgba(36, 28, 22, 0.4); z-index: 3; }
+    .overlay[hidden], .screen[hidden] { display: none; }
+    .dialog { width: min(480px, 100%); background: var(--card); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 7px 7px 0 #5a4632; padding: 16px; }
+    .dialog h2 { margin: 0 0 8px; font-family: Georgia, Palatino, serif; font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1; }
+    .dialog p { margin: 0 0 8px; line-height: 1.4; }
+    .go { background: var(--ink); color: #fff; border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; cursor: pointer; }
+    .help { margin: 8px 0 0; padding-left: 1.1rem; color: var(--muted); }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    @media (max-width: 720px) {
+      .back-long { display: none; } .back-short { display: inline; }
+      h1 { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back" href="index.html" aria-label="Zurück zur Übersicht"><span class="back-long">Zurück zur Übersicht</span><span class="back-short">← Übersicht</span></a>
+    <div>
+      <p class="hello">Spielewelt</p>
+      <h1>Turmbau</h1>
+    </div>
+    <div class="hud">
+      <span class="pill">Stock <strong id="score">0</strong></span>
+      <span class="pill">Best <strong id="best">0</strong></span>
+    </div>
+    <div class="tools">
+      <button type="button" class="ghost" id="pause" disabled>Pause</button>
+      <button type="button" class="ghost" id="mute" aria-pressed="false">Ton an</button>
+      <button type="button" class="ghost" id="restart">Neustart</button>
+    </div>
+  </header>
+  <div class="stage" id="stage">
+    <canvas id="view"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="dialog screen" data-screen="start">
+        <h2>Turm, nicht Turmfall</h2>
+        <p>Ein Block schaukelt hin und her. Tippe, klicke oder drücke Leertaste, wenn er über dem Turm steht. Was übersteht, wird abgesägt. Perfekt drauf gibt einen Bonus.</p>
+        <ul class="help">
+          <li>Der Turm wächst, die Kamera steigt mit.</li>
+          <li>Zu wenig Auflage und der Turm kippt.</li>
+          <li>Pause mit P. Rekord bleibt auf diesem Gerät.</li>
+        </ul>
+        <p><button type="button" class="go" id="play">Loslegen</button></p>
+      </div>
+      <div class="dialog screen" data-screen="pause" hidden>
+        <h2>Pause</h2>
+        <p>Der Block wartet.</p>
+        <p><button type="button" class="go" id="resume">Weiter</button></p>
+      </div>
+      <div class="dialog screen" data-screen="over" hidden>
+        <h2 id="over-title">Umgekippt</h2>
+        <p id="over-text"></p>
+        <p><button type="button" class="go" id="again">Nochmal</button></p>
+      </div>
+    </div>
+  </div>
+  <p class="sr" id="live" aria-live="polite"></p>
+  <script>
+    (function () {
+      const SAVE = "turmbau";
+      const MUTE = "turmbau-mute";
+      const canvas = document.getElementById("view");
+      const ctx = canvas.getContext("2d");
+      const stage = document.getElementById("stage");
+      const overlay = document.getElementById("overlay");
+      let cssW = 480, cssH = 720, dpr = 1;
+      let mode = "menu";
+      let muted = false;
+      let best = 0;
+      let audioCtx = null;
+      let last = 0;
+      let score = 0;
+      let combo = 0;
+      let speed = 160;
+      let blocks = [];
+      let mover = null;
+      let cam = 0;
+      let shake = 0;
+      const BASE_W = 168;
+      const BH = 26;
+
+      function say(t) { document.getElementById("live").textContent = t; }
+      function loadStore() {
+        try {
+          muted = localStorage.getItem(MUTE) === "1";
+          best = Number(localStorage.getItem(SAVE) || 0) || 0;
+        } catch (err) { best = 0; }
+      }
+      function saveBest() {
+        if (score > best) best = score;
+        try { localStorage.setItem(SAVE, String(best)); } catch (err) { /* ignore */ }
+        document.getElementById("best").textContent = String(best);
+      }
+      function syncMute() {
+        const b = document.getElementById("mute");
+        b.textContent = muted ? "Ton aus" : "Ton an";
+        b.setAttribute("aria-pressed", muted ? "true" : "false");
+      }
+      function unlock() {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        if (!audioCtx) audioCtx = new AC();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      }
+      function tone(freq, dur, type, gain) {
+        if (muted || !audioCtx) return;
+        const t = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type || "square";
+        o.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(gain || 0.05, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t); o.stop(t + dur + 0.02);
+      }
+      function show(which) {
+        overlay.hidden = which === "none";
+        document.querySelectorAll(".screen").forEach(function (el) {
+          el.hidden = el.dataset.screen !== which;
+        });
+        document.getElementById("pause").disabled = which !== "none";
+      }
+      function hueOf(i) { return (18 + i * 22) % 360; }
+      function color(h, l) { return "hsl(" + h + ", 72%, " + (l || 52) + "%)"; }
+
+      function fresh() {
+        score = 0; combo = 0; speed = 150; shake = 0; cam = 0;
+        blocks = [{ x: 0, y: 0, w: BASE_W, h: BH, hue: 18 }];
+        mover = { x: -150, y: BH, w: BASE_W, h: BH, dir: 1, hue: hueOf(1) };
+        document.getElementById("score").textContent = "0";
+        document.getElementById("best").textContent = String(best);
+      }
+      function begin() {
+        fresh();
+        mode = "play";
+        show("none");
+        say("Turm steht. Block fällt auf Zuruf.");
+        tone(440, 0.06, "square", 0.04);
+      }
+      function gameover() {
+        mode = "over";
+        saveBest();
+        document.getElementById("over-title").textContent = score > 8 ? "Hoher Turm" : "Umgekippt";
+        document.getElementById("over-text").textContent = score + " Stockwerke. Rekord " + best + ".";
+        show("over");
+        say("Turm umgekippt. " + score + " Stockwerke.");
+        tone(110, 0.22, "sawtooth", 0.05);
+      }
+      function drop() {
+        if (mode !== "play" || !mover) return;
+        const prev = blocks[blocks.length - 1];
+        const left = Math.max(mover.x - mover.w / 2, prev.x - prev.w / 2);
+        const right = Math.min(mover.x + mover.w / 2, prev.x + prev.w / 2);
+        const overlap = right - left;
+        if (overlap < 8) { shake = 8; gameover(); return; }
+        const perfect = Math.abs(mover.x - prev.x) <= 6;
+        const w = perfect ? prev.w : overlap;
+        const x = perfect ? prev.x : (left + right) / 2;
+        blocks.push({ x: x, y: prev.y + BH, w: w, h: BH, hue: mover.hue });
+        score += 1;
+        if (perfect) { combo += 1; score += 1; tone(660, 0.08, "square", 0.05); say("Perfekt. Serie " + combo + "."); }
+        else { combo = 0; tone(220, 0.06, "square", 0.04); say("Gesägt. " + score + " Stockwerke."); }
+        document.getElementById("score").textContent = String(score);
+        speed = Math.min(520, 150 + score * 14);
+        mover = {
+          x: (Math.random() < 0.5 ? -1 : 1) * (120 + w),
+          y: prev.y + BH * 2,
+          w: w, h: BH,
+          dir: Math.random() < 0.5 ? -1 : 1,
+          hue: hueOf(blocks.length)
+        };
+        cam = mover.y - Math.min(260, cssH * 0.42);
+        if (score > best) saveBest();
+      }
+      function togglePause() {
+        if (mode === "play") { mode = "pause"; show("pause"); say("Pause."); }
+        else if (mode === "pause") { mode = "play"; show("none"); say("Weiter."); }
+      }
+      function resize() {
+        const rect = stage.getBoundingClientRect();
+        cssW = Math.max(2, rect.width);
+        cssH = Math.max(2, rect.height);
+        dpr = Math.min(2, window.devicePixelRatio || 1);
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+      }
+      function step(dt) {
+        if (mode !== "play" || !mover) return;
+        const limit = Math.max(140, mover.w + 90);
+        mover.x += mover.dir * speed * dt;
+        if (mover.x > limit) { mover.x = limit; mover.dir = -1; }
+        if (mover.x < -limit) { mover.x = -limit; mover.dir = 1; }
+        if (shake > 0) shake -= dt * 10;
+      }
+      function draw() {
+        const g = ctx;
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const sky = g.createLinearGradient(0, 0, 0, cssH);
+        sky.addColorStop(0, "#9fd4f2");
+        sky.addColorStop(1, "#f6e7cf");
+        g.fillStyle = sky;
+        g.fillRect(0, 0, cssW, cssH);
+        const scale = Math.min(cssW / 420, cssH / 640);
+        const ox = cssW / 2 + (shake > 0 ? Math.sin(shake * 20) * 3 : 0);
+        const oy = cssH * 0.72 + cam * scale;
+        function X(x) { return ox + x * scale; }
+        function Y(y) { return oy - y * scale; }
+        g.fillStyle = "#d7c4a4";
+        g.fillRect(0, Y(0), cssW, cssH);
+        g.fillStyle = "#8a6a45";
+        g.fillRect(0, Y(0), cssW, 8 * scale);
+        blocks.forEach(function (b) {
+          g.fillStyle = color(b.hue, 54);
+          g.strokeStyle = "#241c16";
+          g.lineWidth = 2;
+          const x = X(b.x - b.w / 2), y = Y(b.y + b.h), w = b.w * scale, h = b.h * scale;
+          g.fillRect(x, y, w, h);
+          g.strokeRect(x, y, w, h);
+          g.fillStyle = "rgba(255,255,255,0.28)";
+          g.fillRect(x + 3, y + 3, Math.max(0, w - 6), 5);
+        });
+        if (mover && mode !== "over") {
+          g.fillStyle = color(mover.hue, 58);
+          g.strokeStyle = "#241c16";
+          const x = X(mover.x - mover.w / 2), y = Y(mover.y + mover.h);
+          g.fillRect(x, y, mover.w * scale, mover.h * scale);
+          g.strokeRect(x, y, mover.w * scale, mover.h * scale);
+        }
+        g.fillStyle = "#241c16";
+        g.font = "700 16px Segoe UI, sans-serif";
+        g.fillText(combo > 1 ? "Serie " + combo : "Tippen zum Fallenlassen", 16, 28);
+      }
+      function frame(now) {
+        let dt = (now - last) / 1000;
+        last = now;
+        if (!isFinite(dt) || dt < 0) dt = 0;
+        if (dt > 0.05) dt = 0.05;
+        step(dt);
+        draw();
+        requestAnimationFrame(frame);
+      }
+      stage.addEventListener("pointerdown", function (e) {
+        if (e.target.closest("button")) return;
+        unlock();
+        if (mode === "menu") begin();
+        else if (mode === "play") drop();
+      });
+      window.addEventListener("keydown", function (e) {
+        if (e.code === "KeyP" && !e.repeat) { togglePause(); e.preventDefault(); return; }
+        if ((e.code === "Space" || e.code === "Enter") && !e.repeat) {
+          unlock();
+          if (mode === "menu" || mode === "over") begin();
+          else if (mode === "play") drop();
+          e.preventDefault();
+        }
+      });
+      document.getElementById("play").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("again").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("restart").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("pause").addEventListener("click", togglePause);
+      document.getElementById("resume").addEventListener("click", togglePause);
+      document.getElementById("mute").addEventListener("click", function () {
+        muted = !muted; syncMute();
+        try { localStorage.setItem(MUTE, muted ? "1" : "0"); } catch (err) { /* ignore */ }
+        if (!muted) unlock();
+      });
+      window.addEventListener("resize", resize);
+      if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+      loadStore();
+      syncMute();
+      fresh();
+      show("start");
+      resize();
+      last = performance.now();
+      requestAnimationFrame(frame);
+      window.__turm = {
+        start: begin,
+        drop: drop,
+        state: function () {
+          return {
+            mode: mode, score: score, best: best, combo: combo,
+            w: mover ? mover.w : 0, x: mover ? mover.x : 0,
+            floors: blocks.length, muted: muted
+          };
+        }
+      };
+    })();
+  </script>
+</body>
+</html>

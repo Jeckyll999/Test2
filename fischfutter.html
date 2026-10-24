@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Fischfutter: Friss kleinere Fische, weiche den großen aus und wachse.">
+  <title>Fischfutter</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2387c4ea'/%3E%3Cellipse cx='58' cy='52' rx='24' ry='14' fill='%23f2c14e'/%3E%3Cpath d='M34 52 L18 40 L18 64 Z' fill='%23e25b48'/%3E%3Ccircle cx='68' cy='48' r='3' fill='%23241c16'/%3E%3C/svg%3E">
+  <style>
+    :root { --ink: #241c16; --muted: #6d5c4d; --card: #fffaf3; --paper: #e7f6ff; --tomato: #c2412d; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      min-height: 100dvh; display: flex; flex-direction: column; color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", "Gill Sans", sans-serif;
+      background: #1b6f9a; overflow: hidden; touch-action: manipulation;
+    }
+    button { font: inherit; color: inherit; touch-action: manipulation; }
+    header {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+      padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+      background: var(--paper); border-bottom: 3px solid var(--ink);
+    }
+    .back { color: var(--ink); text-decoration: none; font-weight: 800; border: 2px solid var(--ink); border-radius: 999px; padding: 6px 10px; background: #fff; }
+    .back-short { display: none; }
+    .back:focus-visible, button:focus-visible { outline: 3px solid var(--tomato); outline-offset: 2px; }
+    .hello { margin: 0; color: var(--tomato); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.68rem; }
+    h1 { margin: 0; font-family: Georgia, Palatino, serif; font-size: 1.15rem; letter-spacing: -0.03em; }
+    .hud { margin-left: auto; display: flex; gap: 8px; font-weight: 800; }
+    .pill { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 4px 10px; }
+    .tools { display: flex; gap: 8px; }
+    .ghost { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 6px 10px; font-weight: 800; cursor: pointer; }
+    .ghost[aria-pressed="true"] { background: var(--ink); color: #fff; }
+    .ghost:disabled { opacity: 0.45; }
+    .stage { flex: 1; position: relative; min-height: 180px; touch-action: none; }
+    canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+    .overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; background: rgba(10, 40, 60, 0.45); z-index: 3; }
+    .overlay[hidden], .screen[hidden] { display: none; }
+    .dialog { width: min(500px, 100%); background: var(--card); border: 3px solid var(--ink); border-radius: 22px; box-shadow: 7px 7px 0 #1d4e6b; padding: 16px; }
+    .dialog h2 { margin: 0 0 8px; font-family: Georgia, Palatino, serif; font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1; }
+    .dialog p { margin: 0 0 8px; line-height: 1.4; }
+    .go { background: var(--ink); color: #fff; border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; cursor: pointer; }
+    .help { margin: 8px 0 0; padding-left: 1.1rem; color: var(--muted); }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    @media (max-width: 720px) {
+      .back-long { display: none; } .back-short { display: inline; }
+      h1 { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back" href="index.html" aria-label="Zurück zur Übersicht"><span class="back-long">Zurück zur Übersicht</span><span class="back-short">← Übersicht</span></a>
+    <div>
+      <p class="hello">Spielewelt</p>
+      <h1>Fischfutter</h1>
+    </div>
+    <div class="hud">
+      <span class="pill" id="stage-pill">Kaulquappe</span>
+      <span class="pill">Punkte <strong id="score">0</strong></span>
+      <span class="pill">Leben <strong id="lives">3</strong></span>
+    </div>
+    <div class="tools">
+      <button type="button" class="ghost" id="pause" disabled>Pause</button>
+      <button type="button" class="ghost" id="mute" aria-pressed="false">Ton an</button>
+      <button type="button" class="ghost" id="restart">Neustart</button>
+    </div>
+  </header>
+  <div class="stage" id="stage">
+    <canvas id="view"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="dialog screen" data-screen="start">
+        <h2>Klein anfangen</h2>
+        <p>Steuere deinen Fisch mit Maus, Finger oder Pfeiltasten. Friss, was kleiner ist. Vor größeren machst du einen Bogen. Drei Leben.</p>
+        <ul class="help">
+          <li>Wachsen ändert die Stufe: Kaulquappe, Barsch, Jäger, Wal.</li>
+          <li>Pause mit P. Rekord bleibt auf diesem Gerät.</li>
+        </ul>
+        <p><button type="button" class="go" id="play">Ins Wasser</button></p>
+      </div>
+      <div class="dialog screen" data-screen="pause" hidden>
+        <h2>Pause</h2>
+        <p>Die Strömung hält an, sobald du weiter machst.</p>
+        <p><button type="button" class="go" id="resume">Weiter</button></p>
+      </div>
+      <div class="dialog screen" data-screen="over" hidden>
+        <h2>Verspeist</h2>
+        <p id="over-text"></p>
+        <p><button type="button" class="go" id="again">Nochmal</button></p>
+      </div>
+    </div>
+  </div>
+  <p class="sr" id="live" aria-live="polite"></p>
+  <script>
+    (function () {
+      const SAVE = "fischfutter";
+      const MUTE = "fischfutter-mute";
+      const canvas = document.getElementById("view");
+      const ctx = canvas.getContext("2d");
+      const stage = document.getElementById("stage");
+      const overlay = document.getElementById("overlay");
+      let cssW = 900, cssH = 600, dpr = 1;
+      let mode = "menu";
+      let muted = false;
+      let best = 0;
+      let audioCtx = null;
+      let last = 0;
+      let score = 0;
+      let lives = 3;
+      let iframe = 0;
+      let fish = [];
+      let bubbles = [];
+      let player = null;
+      let pointer = null;
+      let keys = { x: 0, y: 0 };
+      const WORLD = { w: 1100, h: 700 };
+
+      function say(t) { document.getElementById("live").textContent = t; }
+      function loadStore() {
+        try {
+          muted = localStorage.getItem(MUTE) === "1";
+          best = Number(localStorage.getItem(SAVE) || 0) || 0;
+        } catch (err) { best = 0; }
+      }
+      function saveBest() {
+        if (score > best) best = score;
+        try { localStorage.setItem(SAVE, String(best)); } catch (err) { /* ignore */ }
+      }
+      function syncMute() {
+        const b = document.getElementById("mute");
+        b.textContent = muted ? "Ton aus" : "Ton an";
+        b.setAttribute("aria-pressed", muted ? "true" : "false");
+      }
+      function unlock() {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        if (!audioCtx) audioCtx = new AC();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+      }
+      function tone(freq, dur, type, gain) {
+        if (muted || !audioCtx) return;
+        const t = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type || "sine";
+        o.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(gain || 0.05, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t); o.stop(t + dur + 0.02);
+      }
+      function show(which) {
+        overlay.hidden = which === "none";
+        document.querySelectorAll(".screen").forEach(function (el) { el.hidden = el.dataset.screen !== which; });
+        document.getElementById("pause").disabled = which !== "none";
+      }
+      function stageName(r) {
+        if (r < 22) return "Kaulquappe";
+        if (r < 34) return "Barsch";
+        if (r < 52) return "Jäger";
+        return "Wal";
+      }
+      function wrap(n, m) { n %= m; return n < 0 ? n + m : n; }
+      function spawnFish(x, y, r, hue) {
+        const ang = Math.random() * Math.PI * 2;
+        const sp = 30 + Math.random() * 50;
+        fish.push({
+          x: x, y: y, r: r,
+          vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+          hue: hue == null ? Math.floor(Math.random() * 360) : hue,
+          wob: Math.random() * 6
+        });
+      }
+      function fillSchool() {
+        fish = [];
+        for (let i = 0; i < 16; i++) {
+          const small = Math.random() < 0.62;
+          const r = small ? 8 + Math.random() * 8 : 26 + Math.random() * 22;
+          spawnFish(Math.random() * WORLD.w, Math.random() * WORLD.h, r);
+        }
+      }
+      function fresh() {
+        score = 0; lives = 3; iframe = 0; pointer = null; keys = { x: 0, y: 0 };
+        player = { x: WORLD.w / 2, y: WORLD.h / 2, vx: 0, vy: 0, r: 14, ang: 0 };
+        fillSchool();
+        bubbles = [];
+        for (let i = 0; i < 18; i++) bubbles.push({ x: Math.random() * WORLD.w, y: Math.random() * WORLD.h, s: 2 + Math.random() * 5, v: 12 + Math.random() * 20 });
+        document.getElementById("score").textContent = "0";
+        document.getElementById("lives").textContent = "3";
+        document.getElementById("stage-pill").textContent = stageName(player.r);
+      }
+      function begin() {
+        fresh();
+        mode = "play";
+        show("none");
+        say("Schwimm los. Kleinere Fische schmecken.");
+        tone(520, 0.08, "sine", 0.05);
+      }
+      function hurt() {
+        if (iframe > 0 || mode !== "play") return;
+        lives -= 1;
+        iframe = 1.3;
+        document.getElementById("lives").textContent = String(lives);
+        tone(140, 0.16, "sawtooth", 0.05);
+        say(lives > 0 ? "Autsch. Noch " + lives + " Leben." : "Verspeist.");
+        if (lives <= 0) {
+          mode = "over";
+          saveBest();
+          document.getElementById("over-text").textContent = score + " Punkte als " + stageName(player.r) + ". Rekord " + best + ".";
+          show("over");
+        }
+      }
+      function eat(other) {
+        score += Math.max(1, Math.round(other.r));
+        player.r = Math.min(78, player.r + other.r * 0.09);
+        document.getElementById("score").textContent = String(score);
+        document.getElementById("stage-pill").textContent = stageName(player.r);
+        if (score > best) saveBest();
+        tone(480 + other.r * 8, 0.06, "sine", 0.04);
+      }
+      function togglePause() {
+        if (mode === "play") { mode = "pause"; show("pause"); say("Pause."); }
+        else if (mode === "pause") { mode = "play"; show("none"); }
+      }
+      function resize() {
+        const rect = stage.getBoundingClientRect();
+        cssW = Math.max(2, rect.width);
+        cssH = Math.max(2, rect.height);
+        dpr = Math.min(2, window.devicePixelRatio || 1);
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+      }
+      function aimFrom(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = (clientX - rect.left) / rect.width;
+        const sy = (clientY - rect.top) / rect.height;
+        pointer = { x: sx * WORLD.w, y: sy * WORLD.h };
+      }
+      function step(dt) {
+        if (mode !== "play") return;
+        if (iframe > 0) iframe -= dt;
+        let ax = keys.x, ay = keys.y;
+        if (pointer) { ax = pointer.x - player.x; ay = pointer.y - player.y; }
+        const al = Math.hypot(ax, ay) || 1;
+        const thrust = pointer || keys.x || keys.y ? 220 : 0;
+        player.vx += (ax / al) * thrust * dt;
+        player.vy += (ay / al) * thrust * dt;
+        player.vx *= 1 - 1.6 * dt;
+        player.vy *= 1 - 1.6 * dt;
+        const sp = Math.hypot(player.vx, player.vy);
+        const max = 240;
+        if (sp > max) { player.vx *= max / sp; player.vy *= max / sp; }
+        player.x = wrap(player.x + player.vx * dt, WORLD.w);
+        player.y = wrap(player.y + player.vy * dt, WORLD.h);
+        if (sp > 8) player.ang = Math.atan2(player.vy, player.vx);
+        fish.forEach(function (f) {
+          if (f.r > player.r * 1.15) {
+            let dx = player.x - f.x, dy = player.y - f.y;
+            if (dx > WORLD.w / 2) dx -= WORLD.w;
+            if (dx < -WORLD.w / 2) dx += WORLD.w;
+            if (dy > WORLD.h / 2) dy -= WORLD.h;
+            if (dy < -WORLD.h / 2) dy += WORLD.h;
+            const d = Math.hypot(dx, dy) || 1;
+            if (d < 280) { f.vx += dx / d * 40 * dt; f.vy += dy / d * 40 * dt; }
+          }
+          f.x = wrap(f.x + f.vx * dt, WORLD.w);
+          f.y = wrap(f.y + f.vy * dt, WORLD.h);
+          f.wob += dt * 4;
+        });
+        for (let i = fish.length - 1; i >= 0; i--) {
+          const f = fish[i];
+          let dx = f.x - player.x, dy = f.y - player.y;
+          if (dx > WORLD.w / 2) dx -= WORLD.w;
+          if (dx < -WORLD.w / 2) dx += WORLD.w;
+          if (dy > WORLD.h / 2) dy -= WORLD.h;
+          if (dy < -WORLD.h / 2) dy += WORLD.h;
+          const d = Math.hypot(dx, dy);
+          if (d < player.r * 0.75 + f.r * 0.55) {
+            if (f.r < player.r * 0.92) { eat(f); fish.splice(i, 1); }
+            else if (f.r > player.r * 1.05) hurt();
+          }
+        }
+        if (fish.length < 14) {
+          const edge = Math.random() < 0.5;
+          const r = Math.random() < 0.55 ? 7 + Math.random() * player.r * 0.45 : player.r * (1.1 + Math.random() * 0.8);
+          spawnFish(edge ? 0 : WORLD.w - 1, Math.random() * WORLD.h, Math.max(7, Math.min(70, r)));
+        }
+        bubbles.forEach(function (b) {
+          b.y -= b.v * dt;
+          if (b.y < -10) { b.y = WORLD.h + 10; b.x = Math.random() * WORLD.w; }
+        });
+      }
+      function drawFish(g, f, scale, flip, you) {
+        g.save();
+        g.translate(f.x * scale, f.y * scale);
+        g.rotate(f.ang || 0);
+        const rw = f.r * scale, rh = f.r * 0.62 * scale;
+        g.fillStyle = you ? "#f2c14e" : "hsl(" + f.hue + ", 70%, 58%)";
+        g.strokeStyle = "#241c16";
+        g.lineWidth = 2;
+        g.beginPath();
+        g.ellipse(0, 0, rw, rh, 0, 0, Math.PI * 2);
+        g.fill(); g.stroke();
+        g.beginPath();
+        g.moveTo(-rw * 0.8, 0);
+        g.lineTo(-rw * 1.35, -rh * 0.8);
+        g.lineTo(-rw * 1.35, rh * 0.8);
+        g.closePath();
+        g.fillStyle = you ? "#e25b48" : "hsl(" + ((f.hue + 30) % 360) + ", 65%, 46%)";
+        g.fill(); g.stroke();
+        g.fillStyle = "#241c16";
+        g.beginPath();
+        g.arc(rw * 0.45, -rh * 0.15, Math.max(2, rw * 0.12), 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+        if (flip) { /* facing handled by angle */ }
+      }
+      function draw() {
+        const g = ctx;
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const water = g.createLinearGradient(0, 0, 0, cssH);
+        water.addColorStop(0, "#7ec8ef");
+        water.addColorStop(0.45, "#2f8fbf");
+        water.addColorStop(1, "#14516e");
+        g.fillStyle = water;
+        g.fillRect(0, 0, cssW, cssH);
+        const scale = Math.min(cssW / WORLD.w, cssH / WORLD.h);
+        const ox = (cssW - WORLD.w * scale) / 2;
+        const oy = (cssH - WORLD.h * scale) / 2;
+        g.save();
+        g.translate(ox, oy);
+        g.fillStyle = "rgba(255,255,255,0.18)";
+        for (let i = 0; i < 5; i++) {
+          g.beginPath();
+          g.moveTo(80 + i * 180, 0);
+          g.lineTo(140 + i * 180, WORLD.h * scale);
+          g.lineTo(180 + i * 180, WORLD.h * scale);
+          g.lineTo(110 + i * 180, 0);
+          g.fill();
+        }
+        g.fillStyle = "#1f6b45";
+        for (let i = 0; i < 7; i++) {
+          const x = 40 + i * 150;
+          g.fillRect(x, WORLD.h * scale - 70, 8, 70);
+          g.beginPath();
+          g.ellipse(x + 4, WORLD.h * scale - 78, 16, 28, 0.4, 0, Math.PI * 2);
+          g.fill();
+        }
+        bubbles.forEach(function (b) {
+          g.strokeStyle = "rgba(255,255,255,0.7)";
+          g.beginPath();
+          g.arc(b.x * scale, b.y * scale, b.s, 0, Math.PI * 2);
+          g.stroke();
+        });
+        fish.forEach(function (f) {
+          drawFish(g, { x: f.x, y: f.y, r: f.r, ang: Math.atan2(f.vy, f.vx), hue: f.hue }, scale, false, false);
+        });
+        if (player) {
+          g.globalAlpha = iframe > 0 && Math.floor(iframe * 12) % 2 === 0 ? 0.45 : 1;
+          drawFish(g, player, scale, false, true);
+          g.globalAlpha = 1;
+        }
+        g.restore();
+      }
+      function frame(now) {
+        let dt = (now - last) / 1000;
+        last = now;
+        if (!isFinite(dt) || dt < 0) dt = 0;
+        if (dt > 0.05) dt = 0.05;
+        step(dt);
+        draw();
+        requestAnimationFrame(frame);
+      }
+      function setKey(code, on) {
+        let used = false;
+        if (code === "ArrowLeft" || code === "KeyA") { keys.x = on ? -1 : (keys.x < 0 ? 0 : keys.x); used = true; }
+        if (code === "ArrowRight" || code === "KeyD") { keys.x = on ? 1 : (keys.x > 0 ? 0 : keys.x); used = true; }
+        if (code === "ArrowUp" || code === "KeyW") { keys.y = on ? -1 : (keys.y < 0 ? 0 : keys.y); used = true; }
+        if (code === "ArrowDown" || code === "KeyS") { keys.y = on ? 1 : (keys.y > 0 ? 0 : keys.y); used = true; }
+        if (used && on) pointer = null;
+        return used;
+      }
+      canvas.addEventListener("pointerdown", function (e) { unlock(); if (mode === "menu") begin(); aimFrom(e.clientX, e.clientY); });
+      canvas.addEventListener("pointermove", function (e) { if (e.buttons || e.pointerType === "touch") aimFrom(e.clientX, e.clientY); });
+      window.addEventListener("keydown", function (e) {
+        if (e.code === "KeyP" && !e.repeat) { togglePause(); e.preventDefault(); return; }
+        if (setKey(e.code, true)) e.preventDefault();
+      });
+      window.addEventListener("keyup", function (e) { setKey(e.code, false); });
+      document.getElementById("play").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("again").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("restart").addEventListener("click", function () { unlock(); begin(); });
+      document.getElementById("pause").addEventListener("click", togglePause);
+      document.getElementById("resume").addEventListener("click", togglePause);
+      document.getElementById("mute").addEventListener("click", function () {
+        muted = !muted; syncMute();
+        try { localStorage.setItem(MUTE, muted ? "1" : "0"); } catch (err) { /* ignore */ }
+      });
+      window.addEventListener("resize", resize);
+      if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+      loadStore();
+      syncMute();
+      fresh();
+      show("start");
+      resize();
+      last = performance.now();
+      requestAnimationFrame(frame);
+      window.__fisch = {
+        start: begin,
+        spawn: function (x, y, r) { spawnFish(x, y, r, 120); return fish.length; },
+        place: function (x, y) { if (player) { player.x = x; player.y = y; player.vx = 0; player.vy = 0; } },
+        clearFish: function () { fish = []; },
+        state: function () {
+          return {
+            mode: mode, score: score, best: best, lives: lives, r: player ? player.r : 0,
+            stage: player ? stageName(player.r) : "", x: player ? player.x : 0, y: player ? player.y : 0,
+            fish: fish.length, muted: muted
+          };
+        }
+      };
+    })();
+  </script>
+</body>
+</html>

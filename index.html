@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Spielewelt — sechs kleine Spiele: Regal-Roulette, Klecks Volley, Feenherz, Neon-Duell, Knochenhüpfer und Vending Machine Empire.">
+  <meta name="description" content="Spielewelt — elf kleine Spiele: Regal-Roulette, Klecks Volley, Feenherz, Neon-Duell, Knochenhüpfer, Vending Machine Empire, Kipp-Trial, Turmbau, Fischfutter, Sternenwache und Burger-Rausch.">
   <title>Spielewelt</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
   <style>
@@ -592,6 +592,53 @@
       50% { transform: translateY(-16px); }
     }
 
+    .trial-stage { background: linear-gradient(#8ec8ef, #d9f0c8); }
+    .trial-hill {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 46px;
+      background: #6a5138; border-top: 6px solid #3f6b32;
+      clip-path: polygon(0 70%, 18% 40%, 36% 78%, 55% 28%, 74% 64%, 100% 36%, 100% 100%, 0 100%);
+    }
+    .trial-bike { position: absolute; left: 42%; bottom: 38px; width: 54px; height: 28px; }
+    .trial-bike i { position: absolute; bottom: 0; width: 16px; height: 16px; border-radius: 50%; background: #241c16; border: 2px solid #d8d2c8; }
+    .trial-bike i:first-child { left: 0; }
+    .trial-bike i:last-child { right: 0; }
+    .trial-bike b { position: absolute; left: 14px; bottom: 10px; width: 28px; height: 10px; background: #c2412d; border-radius: 6px; border: 2px solid #241c16; }
+
+    .tower-stage { background: linear-gradient(#9fd4f2, #f6e7cf); display: flex; flex-direction: column-reverse; align-items: center; justify-content: flex-start; }
+    .t-block { border: 3px solid #241c16; border-bottom: 0; }
+    .t-block:nth-child(1) { width: 92px; height: 22px; background: #e25b48; }
+    .t-block:nth-child(2) { width: 74px; height: 22px; background: #f2c14e; }
+    .t-block:nth-child(3) { width: 58px; height: 22px; background: #5fbf7a; }
+    .t-block:nth-child(4) { width: 40px; height: 22px; background: #7eb6ff; animation: coinhop 1.6s ease-in-out infinite; }
+
+    .fish-stage { background: linear-gradient(#7ec8ef, #14516e); overflow: hidden; }
+    .fish {
+      position: absolute; width: 54px; height: 28px; border-radius: 50%; background: #f2c14e; border: 3px solid #241c16;
+      top: 46%; left: 38%;
+    }
+    .fish::before { content: ""; position: absolute; left: -14px; top: 4px; border: 10px solid transparent; border-right-color: #e25b48; }
+    .fish::after { content: ""; position: absolute; right: 10px; top: 6px; width: 6px; height: 6px; background: #241c16; border-radius: 50%; }
+    .fish.small { width: 28px; height: 16px; left: 18%; top: 28%; background: #7eb6ff; }
+    .fish.big { width: 72px; height: 36px; left: 62%; top: 58%; background: #e25b48; }
+
+    .star-stage { background: #0b1020; }
+    .star-ship {
+      position: absolute; left: 46%; top: 42%; width: 0; height: 0;
+      border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 26px solid #7ee0ff;
+      filter: drop-shadow(0 0 6px #7ee0ff);
+    }
+    .star-rock { position: absolute; background: #8d7d68; border: 2px solid #e6d7c3; border-radius: 40% 60% 50% 40%; }
+    .star-rock.a { width: 28px; height: 24px; left: 18%; top: 22%; }
+    .star-rock.b { width: 18px; height: 16px; right: 16%; bottom: 24%; }
+
+    .burger-stage { background: #f6d7a8; display: flex; align-items: flex-end; justify-content: center; }
+    .burger { width: 92px; margin-bottom: 28px; display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; }
+    .burger i { display: block; border: 2px solid #241c16; }
+    .burger .bun { width: 92px; height: 18px; background: #e2b15a; border-radius: 4px 4px 14px 14px; }
+    .burger .pat { width: 78px; height: 14px; background: #7a3b24; }
+    .burger .let { width: 88px; height: 10px; background: #5fbf7a; border-radius: 8px; }
+    .burger .top { width: 92px; height: 20px; background: #c2412d; border-radius: 16px 16px 4px 4px; }
+
     @media (min-width: 760px) {
       .games { grid-template-columns: 1fr 1fr; }
       .card { min-height: 360px; }
@@ -600,7 +647,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .card { transition: none; }
-      .blob, .ball, .f-fairy, .f-heart, .f-cloud.a, .n-pad, .n-ball, .b-skel, .b-bat, .vend-coin { animation: none; }
+      .blob, .ball, .f-fairy, .f-heart, .f-cloud.a, .n-pad, .n-ball, .b-skel, .b-bat, .vend-coin, .t-block:nth-child(4) { animation: none; }
     }
   </style>
 </head>
@@ -609,7 +656,7 @@
     <header>
       <p class="hello">Spielwiese</p>
       <h1>Spielewelt</h1>
-      <p class="lede">Sechs Spiele, kein Download. Sortieren, hüpfen, der Fee helfen, im Licht duellieren, nachts über den Friedhof springen oder ein Automaten-Imperium aufbauen. Such dir aus, womit du anfängst.</p>
+      <p class="lede">Elf Spiele, kein Download. Sortieren, hüpfen, der Fee helfen, im Licht duellieren, nachts über den Friedhof springen, ein Automaten-Imperium aufbauen, mit dem Motorrad durch den Loop, einen Turm stapeln, Fische fressen, Asteroiden abwehren oder Burger schichten. Such dir aus, womit du anfängst.</p>
     </header>
 
     <div class="games">
@@ -718,6 +765,71 @@
             <div class="vend-flap"></div>
           </div>
           <div class="vend-coin"></div>
+        </div>
+      </a>
+
+      <a class="card" href="kipp-trial.html">
+        <div class="card-body">
+          <p class="kicker">Motorrad</p>
+          <h2>Kipp-Trial</h2>
+          <p>Gas, Bremse, vor und zurück lehnen. Hügel, Kisten und ein Loop. Der Helm darf den Boden nicht küssen. Zeit, Fehler, Medaillen.</p>
+          <span class="play">Spielen</span>
+        </div>
+        <div class="stage trial-stage" aria-hidden="true">
+          <div class="trial-hill"></div>
+          <div class="trial-bike"><i></i><b></b><i></i></div>
+        </div>
+      </a>
+
+      <a class="card" href="turmbau.html">
+        <div class="card-body">
+          <p class="kicker">Timing</p>
+          <h2>Turmbau</h2>
+          <p>Der Block pendelt. Tippe im richtigen Moment. Was übersteht, wird abgesägt. Perfekt drauf gibt Extra-Punkte, der Turm wächst nach oben.</p>
+          <span class="play">Spielen</span>
+        </div>
+        <div class="stage tower-stage" aria-hidden="true">
+          <div class="t-block"></div><div class="t-block"></div><div class="t-block"></div><div class="t-block"></div>
+        </div>
+      </a>
+
+      <a class="card" href="fischfutter.html">
+        <div class="card-body">
+          <p class="kicker">Ozean</p>
+          <h2>Fischfutter</h2>
+          <p>Friss, was kleiner ist, und wachse vom Winzling zum Wal. Die großen Fische haben Hunger auf dich. Maus, Finger oder Pfeiltasten.</p>
+          <span class="play">Spielen</span>
+        </div>
+        <div class="stage fish-stage" aria-hidden="true">
+          <div class="fish small"></div>
+          <div class="fish"></div>
+          <div class="fish big"></div>
+        </div>
+      </a>
+
+      <a class="card" href="sternenwache.html">
+        <div class="card-body">
+          <p class="kicker">Weltraum</p>
+          <h2>Sternenwache</h2>
+          <p>Ein kleines Schiff, Wellen aus Brocken, die sich teilen, und ab und zu ein Extra. Drei Leben. Am Handy Steuerknüppel und Feuerknopf.</p>
+          <span class="play">Spielen</span>
+        </div>
+        <div class="stage star-stage" aria-hidden="true">
+          <div class="star-rock a"></div>
+          <div class="star-ship"></div>
+          <div class="star-rock b"></div>
+        </div>
+      </a>
+
+      <a class="card" href="burger-rausch.html">
+        <div class="card-body">
+          <p class="kicker">Theke</p>
+          <h2>Burger-Rausch</h2>
+          <p>Die Bestellung steht. Schichte Boden, Belag und Deckel in der richtigen Folge und serviere, bevor die Zeit ausgeht. Falsch wird teuer.</p>
+          <span class="play">Spielen</span>
+        </div>
+        <div class="stage burger-stage" aria-hidden="true">
+          <div class="burger"><i class="bun"></i><i class="pat"></i><i class="let"></i><i class="top"></i></div>
         </div>
       </a>
     </div>
